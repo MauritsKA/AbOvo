@@ -5,17 +5,16 @@
 %%
 clear;
 clc;
-load('Table_files');    % (mostly unedited) tables which were imported from excel
-load('AddressInfo');    %  Table which was created by us and contains all locations that 
+load('NewData/Orders');    % (mostly unedited) tables which were imported from excel
+load('NewData/Intermodals')
+load('DataHS/LocationInfo')
+load('DataHS/Truck_Tank_Info')
+load('NewData/AddressInfo');    %  Table which was created by us and contains all locations that 
                         %  we have distances off
 %%
 flag = 0;
-
 FromAddressID = Orders.FromAddressID;
 ToAddressID = Orders.ToAddressID;
-AddressID = Locations.AddressID;
-Country = Locations.Country;
-
 
 for i = 1:numel(FromAddressID) % country of origin is added to orders table
     for j = 1:numel(AddressID)
@@ -48,12 +47,12 @@ Orders.FromCountry = FromCountry;
 Orders.ToCountry = ToCountry;
 
 OrderID = Orders.OrderID;
-OrderIDcon = ConUsed.OrderID;
+OrderIDcon = Intermodals.OrderID;
 DirectShipment = ones(size(OrderID));
 flag = 0;
 
 for i = 1:numel(OrderID) % added to orders table whether an order uses intermodal connections
-    for j = 1:size(ConUsed,1)
+    for j = 1:size(Intermodals,1)
         if OrderID(i) == OrderIDcon(j)
             DirectShipment(i,1) = 0;
             flag = 1;
@@ -67,8 +66,8 @@ end
 
 Orders.DirectShipment = DirectShipment;
 
-DepartureAddressID = ConUsed.DepartureAddressId;
-ArrivalAddressID = ConUsed.ArrivalAddressId;
+DepartureAddressID = Intermodals.DepartureAddressID;
+ArrivalAddressID = Intermodals.ArrivalAddressID;
 
 for i = 1:numel(DepartureAddressID) % add to connection table what thestarting country is 
     for j = 1:numel(AddressID)      % of the connection
@@ -82,7 +81,7 @@ for i = 1:numel(DepartureAddressID) % add to connection table what thestarting c
         end
     end
 end
-ConUsed.DepartureCountry = DepartureCountry;
+Intermodals.DepartureCountry = DepartureCountry;
 
 for i = 1:numel(ArrivalAddressID) % add to connection table what the arrival country is
     for j = 1:numel(AddressID)
@@ -96,7 +95,7 @@ for i = 1:numel(ArrivalAddressID) % add to connection table what the arrival cou
         end
     end
 end
-ConUsed.ArrivalCountry = ArrivalCountry;
+Intermodals.ArrivalCountry = ArrivalCountry;
 
 
 Address_with_Info = AddressInfo.AddressID; % add the starting location of the truck and tanks
@@ -114,7 +113,7 @@ for i = 1:size(Truck_Tank,1)
 end
 
 Truck_Tank.Truck_Tank_Country = Truck_Tank_Country;
-        
-        
+
+
         
         
