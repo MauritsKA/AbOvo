@@ -20,4 +20,4 @@ for i = 1:numel(Countries)
     Number_Cleaning(i) = sum(Location_Country == Countries(i) & Cleaning_boolean == 1);
 end
 
-Countries_Recource_Info = table(Countries,Number_Trucks,Number_Tanks,Number_Cleaning);
+Countries_Recources_Info = table(Countries,Number_Trucks,Number_Tanks,Number_Cleaning);
