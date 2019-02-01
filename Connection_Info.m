@@ -9,8 +9,6 @@ for i = 1:length(Orders.OrderID)
     OrderConnections(i).Intermodals = Intermodals(Intermodals.OrderID == Orders.OrderID(i),1:end);
 end
 
-Countries = unique(AddressInfo.Country);
-
 % Total orders country
 for i = 1:length(Countries) % for each country
     TotalOrders(i,1) = sum(Orders.FromCountry == Countries(i) | Orders.ToCountry == Countries(i));

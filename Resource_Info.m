@@ -3,7 +3,7 @@ clc;
 load('NewData/AddressInfo')
 load('NewData/Truck_Tank_Info')
 %%
-Countries = unique(AddressInfo.Country);
+
 Truck_Tank_Country = Truck_Tank.Truck_Tank_Country;
 Truck = Truck_Tank_Country(1:257,1);
 Tank = Truck_Tank_Country(258:size(Truck_Tank_Country,1),1);
