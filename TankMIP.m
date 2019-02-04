@@ -9,29 +9,27 @@ load NewData/LinkingMatrices
 load NewData/Truck_Tank_Info
 load NewData/Orders
 load NewData/InterModals
+load NewData/Orderlists
 
-% Selecting appropriate data
 Tanks = Truck_Tank(Truck_Tank.ResourceType == 'Tank',1:end);
-Region = Countries(24); 
-RegionOrders = Orders(Orders.FromCountry==Region | Orders.ToCountry ==Region,:);
 
-INT = RegionOrders(RegionOrders.DirectShipment == 0,:);
-count=0;
-for i = 1:length(INT.OrderID)
-    B= Intermodals(Intermodals.OrderID == INT.OrderID(i),:);
-    if size(B,1) > 1
-          count = i;
-    end 
-      
-end 
+% Select Region
+ID = 24;
+Region = string(Countries(ID));
 
-% Parameters
-U = RegionOrders(RegionOrders.DirectShipment == 1,:).OrderID; % Orders
-O = ones(5,1); % Outgoing Orders
-I = ones(5,1); % Incoming Orders
-Ws = ones(5,1); % Incoming empty tanks - part of Source
-Wt = ones(5,1); % Outgoing empty tanks - part of Sink
-Ds = [table2array(Tanks(:,1)) zeros(size(Tanks,1),1)]; % Tanktainer Sources
+t_start = datetime(2018,03,20,00,00,00); % Set appropriate day
+t_end = t_start + day(1);
+
+[U,I,O,Ws,Wt] = SelectOrders(OrderLists,ID,t_start,t_end);
+
+Ds = [table2array(Tanks(:,1)) zeros(size(Tanks,1),1)]; % Tanktainer Sources & times STILL MATRIC - NOT TABLE
+
+% Sources: Ds, Ws, I
+% Sinks: O, Wt, Dt(?)
+% Set Dt to all terminals (433) * all tanktainers (1001) = 433433
+
+% A: From all S to all T or U, except if time doesn't allow
+% A: From All U to all T or U, except if time doesn't allow
 A = ones(5,5); % Compatible arcs
 
 s_cl = 120; % Cleaning [Minutes] - NEEDS VERIFICATION
@@ -39,10 +37,6 @@ s_m = 36; % (Dis)mounting [Minutes]
 s_l_fix = 18; % Fixed (un)loading [Minutes]
 s_l_var = 1; % (Un)loading per gravity unit [Minutes]
 
-TankAddresses = unique(Tanks.HomeAddressID);
-for i = 1:length(TankAddresses)
-    Counts(i,1) = sum(Tanks.HomeAddressID == TankAddresses(i));
-end 
 %% Optimization
 % Declaration of variables
 X = sdpvar(size(AddressInfo,1),size(AddressInfo,1),'full');

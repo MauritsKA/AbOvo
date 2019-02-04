@@ -3,8 +3,15 @@ clear all; clc;
 load DataHS/Distances
 load DataHS/LocationInfo
 load DataHS/TerminalAddresses
+load DataHS/CompleteDataNeeded
+load NewData/NewFromAddressInfo
 
-Addresses= unique(AddressFromID); % All unique adresses, checked and correpsonds with AdressesTo
+AddressFromID = [AddressFromID; EuropeCompleteUsed.AddressFromID];
+AddressToID = [AddressToID; EuropeCompleteUsed.AddressToID];
+DistanceKM = [DistanceKM; EuropeCompleteUsed.DistanceKM];
+DistanceSeconds = [DistanceSeconds; EuropeCompleteUsed.DistanceSeconds];
+
+Addresses= NewAddressInfo.AddressID; %unique(AddressFromID); % All unique adresses, checked and corresponds with AdressesTo
 Indices = 1:length(AddressFromID);
 
 DistanceMatrix = zeros(length(Addresses));
@@ -22,6 +29,9 @@ for i = 1:length(Addresses)
         end
     end
 end
+%%
+AddressInfo = NewAddressInfo;
+Countries = unique(AddressInfo.Country);
 
 %% Processing Address info 
 TerminalAddresses = [FromAddressID;ToAddressID]; % Select all arrival & departure locations
