@@ -4,11 +4,16 @@ load DataHS/CostsPerKmPerTrucks
 
 %%
 C_km = mean(CostsPerKm);
-C_h = 20/60;
+C_min = 20/60;
+cleaningTime = 120;
+mountingTime = 36;
 
-%%
+%% Calculate cost matrix
+CostMatrix = DistanceMatrix * C_km + TimeMatrix * C_min;
+
+%% Calculate nearest cleaning facility
 CheapestClean =  zeros(size(DistanceMatrix));
-TotalPrev = 1e12;
+TotalBest = 1e12;
 
 for i = 1:length(AddressInfo.AddressID)
     if AddressInfo.IsCustomer(i) == 1 || AddressInfo.IsTerminal(i) == 1
@@ -19,19 +24,38 @@ for i = 1:length(AddressInfo.AddressID)
                 for k = 1:length(AddressInfo.AddressID)
                     if AddressInfo.IsCleaning(k) == 1
                         
-                        TotalTemp = C_km * (DistanceMatrix(i,k) + DistanceMatrix(k,j)) + C_h * (TimeMatrix(i,k) + TimeMatrix(k,j));
+                        TotalTemp = CostMatrix(i,k) + CostMatrix(k,j);
                         
-                        if TotalTemp < TotalPrev
+                        if TotalTemp < TotalBest
                             CheapestClean(i,j) = k;
-                            TotalPrev  = TotalTemp;
+                            TotalBest  = TotalTemp;
                         end
                         
                     end
                 end
-                TotalPrev = 1e12;
+                TotalBest = 1e12;
             end
         end
     end
     
 end
+
+%% Calculate time it takes to drive via nearest cleaning facility
+% Times include driving, 2x mounting and cleaning (2h). Times in minutes
+
+n = size(CheapestClean,2);
+timeViaCleaning = zeros(size(CheapestClean));
+
+for i = 1:n
+    for j = 1:n
+        if CheapestClean(i,j) > 0
+            timeViaCleaning(i,j) = TimeMatrix(i, CheapestClean(i,j)) + TimeMatrix(CheapestClean(i,j),j) + cleaningTime + 2*mountingTime;
+        end
+    end
+end
+
+
+%% clear variables
+clear i j k n TotalPrev TotalTemp
+
 
