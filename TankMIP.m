@@ -17,7 +17,7 @@ Tanks = Truck_Tank(Truck_Tank.ResourceType == 'Tank',1:end);
 ID = 24;
 Region = string(Countries(ID));
 
-t_start = datetime(2018,03,20,00,00,00); % Set appropriate day
+t_start = datetime(2018,03,20,00,00,00); % Set appropriate time window
 t_end = t_start + day(1);
 
 [U,I,O,Ws,Wt] = SelectOrders(OrderLists,ID,t_start,t_end);

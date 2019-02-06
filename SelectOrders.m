@@ -38,7 +38,7 @@ for i = 1:max([size(U_c,1),size(O_c,1),size(I_c,1),size(Ws_c,1),size(Wt_c,1)]) %
         end
     end
     if i <= size(Wt_c,1)
-        if Wt_c.DeliveryWindowStart(i) >= t_start && Wt_c.DeliveryWindowStart(i) < t_end
+        if Wt_c.DeliveryWindowEnd(i) >= t_start && Wt_c.DeliveryWindowEnd(i) < t_end
          Wt(Wt_i,:) =Wt_c(i,:);
          Wt_i= Wt_i+1;
         end

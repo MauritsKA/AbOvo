@@ -2,7 +2,7 @@
 % Group 5 - OR - Erasmus University Rotterdam
 
 % Initialization
-clear; clc; close all;
+clear all; clc; close all;
 load NewData/AddressInfo
 load NewData/Orders
 load NewData/InterModals
@@ -12,7 +12,7 @@ I  = cell2table(cell(0,12), 'VariableNames', {'CustomerID','OrderID','Quantity1'
 O  = I;
 T = I;
 Ws  = cell2table(cell(0,4), 'VariableNames', {'PickupWindowStart','FromAddressID','FromCountry','ConnectionName'});
-Wt  = cell2table(cell(0,4), 'VariableNames', {'DeliveryWindowStart','ToAddressID','ToCountry','ConnectionName'});
+Wt  = cell2table(cell(0,4), 'VariableNames', {'DeliveryWindowEnd','ToAddressID','ToCountry','ConnectionName'});
 
 % Create Order lists structure and add regular orders
 for k = 1:length(Countries)
