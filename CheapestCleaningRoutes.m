@@ -16,10 +16,7 @@ CheapestClean =  zeros(size(DistanceMatrix));
 TotalBest = 1e12;
 
 for i = 1:length(AddressInfo.AddressID)
-    if AddressInfo.IsCustomer(i) == 1 || AddressInfo.IsTerminal(i) == 1 || (AddressInfo.IsCustomer(i) == 0 &&...
-                                                                            AddressInfo.IsTerminal(i) == 0 &&...
-                                                                            AddressInfo.IsSupplier(i) == 0 &&...
-                                                                            AddressInfo.IsCleaning(i) == 0)
+    
         
         for j = 1:length(AddressInfo.AddressID)
             if AddressInfo.IsSupplier(j) == 1
@@ -39,7 +36,7 @@ for i = 1:length(AddressInfo.AddressID)
                 TotalBest = 1e12;
             end
         end
-    end
+   
     i
 end
 
