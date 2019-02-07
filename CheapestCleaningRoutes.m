@@ -16,7 +16,10 @@ CheapestClean =  zeros(size(DistanceMatrix));
 TotalBest = 1e12;
 
 for i = 1:length(AddressInfo.AddressID)
-    if AddressInfo.IsCustomer(i) == 1 || AddressInfo.IsTerminal(i) == 1
+    if AddressInfo.IsCustomer(i) == 1 || AddressInfo.IsTerminal(i) == 1 || (AddressInfo.IsCustomer(i) == 0 &&...
+                                                                            AddressInfo.IsTerminal(i) == 0 &&...
+                                                                            AddressInfo.IsSupplier(i) == 0 &&...
+                                                                            AddressInfo.IsCleaning(i) == 0)
         
         for j = 1:length(AddressInfo.AddressID)
             if AddressInfo.IsSupplier(j) == 1
@@ -37,7 +40,7 @@ for i = 1:length(AddressInfo.AddressID)
             end
         end
     end
-    
+    i
 end
 
 %% Calculate time it takes to drive via nearest cleaning facility
@@ -45,11 +48,15 @@ end
 
 n = size(CheapestClean,2);
 timeViaCleaning = zeros(size(CheapestClean));
+CostTravelViaCleaning = zeros(size(CheapestClean));
+distanceViaCleaning = zeros(size(CheapestClean));
 
 for i = 1:n
     for j = 1:n
         if CheapestClean(i,j) > 0
             timeViaCleaning(i,j) = TimeMatrix(i, CheapestClean(i,j)) + TimeMatrix(CheapestClean(i,j),j) + cleaningTime + 2*mountingTime;
+            distanceViaCleaning(i,j) = DistanceMatrix(i, CheapestClean(i,j)) + DistanceMatrix(CheapestClean(i,j),j);
+            CostTravelViaCleaning(i,j) = CostMatrix(i, CheapestClean(i,j)) + CostMatrix(CheapestClean(i,j),j);
         end
     end
 end
