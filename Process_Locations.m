@@ -1,31 +1,28 @@
 %% Creating location matrix from data
-clear all; clc;
-load DataHS/Distances
-load DataHS/LocationInfo
-load DataHS/TerminalAddresses
-load DataHS/CompleteDataNeeded
-load NewData/NewFromAddressInfo
+clear vars; clc;
+load DataHS/LocationInfo % All locations
+load DataHS/UsedDistancesComplete % All distances
+load NewData/AddressInfo % All adresses we have to know (small set + 50 missing)
 
-AddressFromID = [AddressFromID; EuropeCompleteUsed.AddressFromID];
-AddressToID = [AddressToID; EuropeCompleteUsed.AddressToID];
-DistanceKM = [DistanceKM; EuropeCompleteUsed.DistanceKM];
-DistanceSeconds = [DistanceSeconds; EuropeCompleteUsed.DistanceSeconds];
+AddressFromID = UsedDistancesComplete.AddressFromID;
+AddressToID = UsedDistancesComplete.AddressToID;
+DistanceKM = UsedDistancesComplete.DistanceKM; 
+DistanceSeconds = UsedDistancesComplete.DistanceSeconds;
 
-Addresses= NewAddressInfo.AddressID; %unique(AddressFromID); % All unique adresses, checked and corresponds with AdressesTo
+Addresses= AddressInfo.AddressID; % All unique adresses, checked and corresponds - unique(AddressFromID)
 Indices = 1:length(AddressFromID);
 
 DistanceMatrix = zeros(length(Addresses));
 TimeMatrix = zeros(length(Addresses));
 for i = 1:length(Addresses)
     AddressFrom = Addresses(i); % Select next from address ID
-    IndFrom = Indices(AddressFrom==AddressFromID); % Take all indices where this ID occurs
-    
+    IndFrom = Indices(AddressFromID==AddressFrom); % Take all indices where this ID occurs
     for j = 1:length(Addresses)
         AddressTo = Addresses(j); % Select next to address ID
         IndTo = IndFrom(AddressToID(IndFrom) == AddressTo); % Check if to address ID occurs in the selected from Indices
         if ~isempty(IndTo) % If connection exists
             DistanceMatrix(i,j) = DistanceKM(IndTo);
-            TimeMatrix(i,j) = DistanceSeconds(IndTo);
+            TimeMatrix(i,j) = DistanceSeconds(IndTo)/60;
         end
     end
 end
@@ -33,7 +30,9 @@ end
 AddressInfo = NewAddressInfo;
 Countries = unique(AddressInfo.Country);
 
-%% Processing Address info 
+%% Processing Address info
+load DataHS/TerminalAddresses
+
 TerminalAddresses = [FromAddressID;ToAddressID]; % Select all arrival & departure locations
 TerminalAddresses = unique(TerminalAddresses); % Select unique terminals
 

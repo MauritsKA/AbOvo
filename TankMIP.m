@@ -12,6 +12,7 @@ load NewData/InterModals
 load NewData/Orderlists
 
 Tanks = Truck_Tank(Truck_Tank.ResourceType == 'Tank',1:end);
+Terminals = AddressInfo(AddressInfo.IsTerminal == 1,:);
 
 % Select Region
 ID = 24;
@@ -21,16 +22,16 @@ t_start = datetime(2018,03,20,00,00,00); % Set appropriate time window
 t_end = t_start + day(1);
 
 [U,I,O,Ws,Wt] = SelectOrders(OrderLists,ID,t_start,t_end);
+%[Ds, Dt] = SelectResources();
 
-Ds = [table2array(Tanks(:,1)) zeros(size(Tanks,1),1)]; % Tanktainer Sources & times STILL MATRIC - NOT TABLE
-
+Ds = [Tanks.ID Tanks.HomeAddressID zeros(size(Tanks,1),1)]; % Tanktainer Sources & times STILL MATRIX - NOT TABLE
+Dt = repmat(Terminals.AddressID',round(length(Ds)*0.001),1);
+Dt = Dt(:);
 % Sources: Ds, Ws, I
 % Sinks: O, Wt, Dt(?)
 % Set Dt to all terminals (433) * all tanktainers (1001) = 433433
 
-% A: From all S to all T or U, except if time doesn't allow
-% A: From All U to all T or U, except if time doesn't allow
-A = ones(5,5); % Compatible arcs
+A = GetArcs(U,I,O,Ws,Wt,Ds,Dt,t_start,AddressInfo,TimeMatrix); % Compatible arcs
 
 s_cl = 120; % Cleaning [Minutes] - NEEDS VERIFICATION
 s_m = 36; % (Dis)mounting [Minutes]

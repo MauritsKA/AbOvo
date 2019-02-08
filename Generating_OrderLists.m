@@ -2,7 +2,7 @@
 % Group 5 - OR - Erasmus University Rotterdam
 
 % Initialization
-clear all; clc; close all;
+clear vars; clc; close all;
 load NewData/AddressInfo
 load NewData/Orders
 load NewData/InterModals
