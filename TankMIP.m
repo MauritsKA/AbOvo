@@ -10,6 +10,8 @@ load NewData/Truck_Tank_Info
 load NewData/Orders
 load NewData/InterModals
 load NewData/Orderlists
+load NewData/CostMatrix
+load NewData/CheapestCleaning
 
 Tanks = Truck_Tank(Truck_Tank.ResourceType == 'Tank',1:end);
 Terminals = AddressInfo(AddressInfo.IsTerminal == 1,:);
@@ -19,17 +21,16 @@ ID = 24;
 Region = string(Countries(ID));
 
 t_start = datetime(2018,03,20,00,00,00); % Set appropriate time window
-t_end = t_start + day(1);
+t_end = datetime(2018,03,21,00,00,00);
 
 [U,I,O,Ws,Wt] = SelectOrders(OrderLists,ID,t_start,t_end);
-
-%[Ds, Dt] = SelectResources(); % Ds Dt should be made with such a function
-
-% Currently made by these 4 lines:, 
-Ds = [Tanks.ID Tanks.HomeAddressID zeros(size(Tanks,1),1)]; % Tanktainer IDs, Sources & times
-Ds = Ds(1:20,:); % Select just 20
-Dt = Terminals.AddressID; % A vector of sink depot addresses (can contain duplicates!)
-Dt = Dt(1:30); % Select 30
+tic
+Dstart = [Tanks.ID Tanks.HomeAddressID zeros(size(Tanks,1),1)];
+Dstart(:,3) = [1:1:size(Dstart,1)]'-ones(size(Dstart,1),1)*7400; %Release times go in 3 column, now random times generated
+[Ds] = SelectResourcesDs(U,O,Wt,Dstart,t_start,CostTravelViaCleaning,...
+                        timeViaCleaning,AddressInfo);
+[Dt] = SelectResourcesDt(U,I,Ws,AddressInfo,Ds,CostMatrix);                    
+toc
 % Order: Ds Ws I U O Wt Dt
 
 A = GetArcs(U,I,O,Ws,Wt,Ds,Dt,t_start,AddressInfo,TimeMatrix); % Compatible arcs
