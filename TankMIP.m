@@ -20,20 +20,21 @@ Terminals = AddressInfo(AddressInfo.IsTerminal == 1,:);
 ID = 24;
 Region = string(Countries(ID));
 
-t_start = datetime(2018,03,20,00,00,00); % Set appropriate time window
-t_end = datetime(2018,03,21,00,00,00);
+t_start = datetime(2018,03,15,00,00,00); % Set appropriate time window
+t_end = datetime(2018,03,29,00,00,00);
 
 [U,I,O,Ws,Wt] = SelectOrders(OrderLists,ID,t_start,t_end);
-tic
-Dstart = [Tanks.ID Tanks.HomeAddressID zeros(size(Tanks,1),1)];
-Dstart(:,3) = [1:1:size(Dstart,1)]'-ones(size(Dstart,1),1)*7400; %Release times go in 3 column, now random times generated
+
+%Dstart = [Tanks.ID Tanks.HomeAddressID -10000*ones(size(Tanks.ID,1),1)]; %Release times go in 3 column, now random times generated
+Dstart = [Tanks.ID Tanks.HomeAddressID zeros(size(Tanks.ID,1),1)]; 
 [Ds] = SelectResourcesDs(U,O,Wt,Dstart,t_start,CostTravelViaCleaning,...
                         timeViaCleaning,AddressInfo);
 [Dt] = SelectResourcesDt(U,I,Ws,AddressInfo,Ds,CostMatrix);                    
-toc
+
 % Order: Ds Ws I U O Wt Dt
 
 A = GetArcs(U,I,O,Ws,Wt,Ds,Dt,t_start,AddressInfo,TimeMatrix); % Compatible arcs
+C = GetCosts(CostMatrix,CostTravelViaCleaning); %Replace costs to supplier with costs via a cleaning to supplier
 
 s_cl = 120; % Cleaning [Minutes] - NEEDS VERIFICATION
 s_m = 36; % (Dis)mounting [Minutes]

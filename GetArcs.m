@@ -14,7 +14,7 @@ Wt_l = size(Wt,1);
 Dt_l =size(Dt,1);
 
 %% Availability 
-Ds_open = Ds(:,3); % Time of availability D from t_start
+Ds_open = Ds.ReleaseTime; % Time of availability D from t_start
 Ws_open = minutes(Ws.PickupWindowStart-t_start); % Time of availability Ws from t_start
 I_open = minutes(I.DeliveryWindowStart-t_start); % Time of availability I from t_start
 U_open = minutes(U.DeliveryWindowStart-t_start); % Time of availability at U cus from t_start
@@ -25,7 +25,7 @@ O_close = minutes(O.PickupWindowEnd-t_start); % Time to complete O from t_start
 U_close = minutes(U.PickupWindowEnd-t_start); % Time to complete U sup from t_start (perform U)
 
 %% Initial locations (per index, not ID)
-Ds_loc= GetIndex(AddressInfo,Ds(:,2)); % Starting location (@ Customer)
+Ds_loc= GetIndex(AddressInfo,Ds.HomeAddressID); % Starting location (@ Customer)
 Ws_loc=GetIndex(AddressInfo,Ws.FromAddressID); % Starting location (@ Terminal)
 I_loc= GetIndex(AddressInfo,I.ToAddressID); % Starting location (@ Customer)
 U_cus= GetIndex(AddressInfo,U.ToAddressID); % Starting location (@ Customer)
