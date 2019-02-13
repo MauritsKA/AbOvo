@@ -145,3 +145,5 @@ else
 end
 
 TotalTime = toc(TotalTime)
+
+[routesTankScheduling]  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, X)

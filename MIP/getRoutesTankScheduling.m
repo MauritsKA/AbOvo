@@ -1,5 +1,5 @@
-function [routesTankScheduling]  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, Xtest)
-Xtest = logical(Xtest);
+function [routesTankScheduling]  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, X)
+X = logical(X);
 n.Ds = size(Ds,1);
 n.Dt = size(Dt,1);
 n.I = size(I,1);
@@ -7,8 +7,8 @@ n.O = size(O,1);
 n.U = size(U,1);
 n.Ws = size(Ws,1);
 n.Wt = size(Wt,1);
-n.Xtest = size(Xtest,1);
-indexList = 1:1:n.Xtest;
+n.X = size(X,1);
+indexList = 1:1:n.X;
 
 fromIndex.Ds = 1;
 fromIndex.Dt = 1;
@@ -18,7 +18,7 @@ fromIndex.O = 1;
 fromIndex.U = 1;
 fromIndex.I = 1;
 
-for i = 1:n.Xtest
+for i = 1:n.X
     if i <= n.Ds
         routes(i).nodeFromType = 'Ds';
         routes(i).data = Ds(fromIndex.Ds,:);
@@ -50,9 +50,9 @@ for i = 1:n.Xtest
     end
 end
 
-for i = 1:n.Xtest
+for i = 1:n.X
     if i <= n.Ds
-        colIndex = indexList(Xtest(i,:));
+        colIndex = indexList(X(i,:));
         if colIndex <= n.Ds
             routes(i).Ds = routes(colIndex).data;
         elseif colIndex <= n.Ds + n.Ws
@@ -69,7 +69,7 @@ for i = 1:n.Xtest
             routes(i).Dt = routes(colIndex).data;
         end
     elseif i <= n.Ds + n.Ws
-        colIndex = indexList(Xtest(i,:));
+        colIndex = indexList(X(i,:));
         if colIndex <= n.Ds
             routes(i).Ds = routes(colIndex).data;
         elseif colIndex <= n.Ds + n.Ws
@@ -86,7 +86,7 @@ for i = 1:n.Xtest
             routes(i).Dt = routes(colIndex).data;
         end
     elseif i <= n.Ds + n.Ws + n.I
-        colIndex = indexList(Xtest(i,:));
+        colIndex = indexList(X(i,:));
         if colIndex <= n.Ds
             routes(i).Ds = routes(colIndex).data;
         elseif colIndex <= n.Ds + n.Ws
@@ -103,7 +103,7 @@ for i = 1:n.Xtest
             routes(i).Dt = routes(colIndex).data;
         end
     elseif i <= n.Ds + n.Ws + n.I + n.U
-        colIndex = indexList(Xtest(i,:));
+        colIndex = indexList(X(i,:));
         if colIndex <= n.Ds
             routes(i).Ds = routes(colIndex).data;
         elseif colIndex <= n.Ds + n.Ws
