@@ -21,110 +21,100 @@ fromIndex.I = 1;
 for i = 1:n.X
     if i <= n.Ds
         routes(i).nodeFromType = 'Ds';
-        routes(i).data = Ds(fromIndex.Ds,:);
+        routes(i).nodeFromData = Ds(fromIndex.Ds,:);
         fromIndex.Ds = fromIndex.Ds +1;
-    elseif i <= n.Ds + n.Ws
+    end
+    if n.Ds < i && i <= n.Ds + n.Ws
         routes(i).nodeFromType = 'Ws';
-        routes(i).data = Ws(fromIndex.Ws,:);
+        routes(i).nodeFromData = Ws(fromIndex.Ws,:);
         fromIndex.Ws = fromIndex.Ws +1;
-    elseif i <= n.Ds + n.Ws + n.I
+    end
+    if n.Ds + n.Ws < i && i <= n.Ds + n.Ws + n.I
         routes(i).nodeFromType = 'I';
-        routes(i).data = I(fromIndex.I,:);
+        routes(i).nodeFromData = I(fromIndex.I,:);
         fromIndex.I = fromIndex.I +1;
-    elseif i <= n.Ds + n.Ws + n.I + n.U
+    end
+    if n.Ds + n.Ws + n.I < i && i <= n.Ds + n.Ws + n.I + n.U
         routes(i).nodeFromType = 'U';
-        routes(i).data = U(fromIndex.U,:);
+        routes(i).nodeFromData = U(fromIndex.U,:);
         fromIndex.U = fromIndex.U +1;
-    elseif i <= n.Ds + n.Ws + n.I + n.U + n.O
+    end
+    if n.Ds + n.Ws + n.I + n.U < i && i <= n.Ds + n.Ws + n.I + n.U + n.O
         routes(i).nodeFromType = 'O';
-        routes(i).data = O(fromIndex.O,:);
+        routes(i).nodeFromData = O(fromIndex.O,:);
         fromIndex.O = fromIndex.O +1;
-    elseif i <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
+    end
+    if n.Ds + n.Ws + n.I + n.U + n.O < i && i <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
         routes(i).nodeFromType = 'Wt';
-        routes(i).data = Wt(fromIndex.Wt,:);
+        routes(i).nodeFromData = Wt(fromIndex.Wt,:);
         fromIndex.Wt = fromIndex.Wt +1;
-    elseif i <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
+    end
+    if n.Ds + n.Ws + n.I + n.U + n.O + n.Wt < i && i <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
         routes(i).nodeFromType = 'Dt';
-        routes(i).data = Dt(fromIndex.Dt,:);
+        routes(i).nodeFromData = Dt(fromIndex.Dt,:);
         fromIndex.Dt = fromIndex.Dt +1;
     end
 end
 
-for i = 1:n.X
-    if i <= n.Ds
-        colIndex = indexList(X(i,:));
-        if colIndex <= n.Ds
-            routes(i).Ds = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws
-            routes(i).Ws = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I
-            routes(i).I = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U
-            routes(i).U = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O
-            routes(i).O = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
-            routes(i).Wt = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
-            routes(i).Dt = routes(colIndex).data;
+for i = 1:n.Ds + n.Ws + n.I
+    
+    colIndex = indexList(X(i,:));
+    if colIndex <= n.Ds
+        routes(i).Ds = routes(colIndex).nodeFromData;
+    end
+    if n.Ds < colIndex && colIndex <= n.Ds + n.Ws
+        routes(i).Ws = routes(colIndex).nodeFromData;
+    end
+    if n.Ds + n.Ws < colIndex && colIndex <= n.Ds + n.Ws + n.I
+        routes(i).I = routes(colIndex).nodeFromData;
+    end
+    if n.Ds + n.Ws + n.I < colIndex && colIndex <= n.Ds + n.Ws + n.I + n.U
+        tempcount = 1;
+        routes(i).U = routes(colIndex).nodeFromData;
+        newColIndex = indexList(X(colIndex,:));
+        while n.Ds + n.Ws + n.I < newColIndex && newColIndex <= n.Ds + n.Ws + n.I + n.U
+            routes(i).U(tempcount+1,:) = routes(newColIndex).nodeFromData;
+            newColIndex = indexList(X(newColIndex,:));
+            tempcount = tempcount+1;
         end
-    elseif i <= n.Ds + n.Ws
-        colIndex = indexList(X(i,:));
-        if colIndex <= n.Ds
-            routes(i).Ds = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws
-            routes(i).Ws = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I
-            routes(i).I = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U
-            routes(i).U = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O
-            routes(i).O = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
-            routes(i).Wt = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
-            routes(i).Dt = routes(colIndex).data;
+        
+        if n.Ds + n.Ws + n.I + n.U < newColIndex && newColIndex <= n.Ds + n.Ws + n.I + n.U + n.O
+            routes(i).O = routes(newColIndex).nodeFromData;
         end
-    elseif i <= n.Ds + n.Ws + n.I
-        colIndex = indexList(X(i,:));
-        if colIndex <= n.Ds
-            routes(i).Ds = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws
-            routes(i).Ws = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I
-            routes(i).I = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U
-            routes(i).U = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O
-            routes(i).O = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
-            routes(i).Wt = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
-            routes(i).Dt = routes(colIndex).data;
+        if n.Ds + n.Ws + n.I + n.U + n.O < newColIndex && newColIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
+            routes(i).Wt = routes(newColIndex).nodeFromData;
         end
-    elseif i <= n.Ds + n.Ws + n.I + n.U
-        colIndex = indexList(X(i,:));
-        if colIndex <= n.Ds
-            routes(i).Ds = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws
-            routes(i).Ws = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I
-            routes(i).I = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U
-            routes(i).U = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O
-            routes(i).O = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
-            routes(i).Wt = routes(colIndex).data;
-        elseif colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
-            routes(i).Dt = routes(colIndex).data;
+        if n.Ds + n.Ws + n.I + n.U + n.O + n.Wt < newColIndex && newColIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
+            routes(i).Dt = routes(newColIndex).nodeFromData;
         end
-    end  
+        
+    end
+    if n.Ds + n.Ws + n.I + n.U < colIndex && colIndex <= n.Ds + n.Ws + n.I + n.U + n.O
+        routes(i).O = routes(colIndex).nodeFromData;
+    end
+    if n.Ds + n.Ws + n.I + n.U + n.O < colIndex && colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt
+        routes(i).Wt = routes(colIndex).nodeFromData;
+    end
+    if n.Ds + n.Ws + n.I + n.U + n.O + n.Wt < colIndex && colIndex <= n.Ds + n.Ws + n.I + n.U + n.O + n.Wt + n.Dt
+        routes(i).Dt = routes(colIndex).nodeFromData;
+    end
     
     
 end
 
-routesTankScheduling(1:n.Ds+n.Ws+n.I+n.U) = routes(1:n.Ds+n.Ws+n.I+n.U);
+routesTankScheduling(1:n.Ds+n.Ws+n.I) = routes(1:n.Ds+n.Ws+n.I);
+
+for i = 1:n.Ds + n.Ws + n.I
+   if i <= n.Ds
+        routesTankScheduling(i).Ds = routesTankScheduling(i).nodeFromData;
+    end
+    if n.Ds < i && i <= n.Ds + n.Ws
+        routesTankScheduling(i).Ws = routesTankScheduling(i).nodeFromData;
+    end
+    if n.Ds + n.Ws < i && i <= n.Ds + n.Ws + n.I
+        routesTankScheduling(i).I = routesTankScheduling(i).nodeFromData;
+    end    
+end
 
 end
 
