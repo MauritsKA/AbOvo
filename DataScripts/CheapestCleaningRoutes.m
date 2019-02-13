@@ -53,7 +53,7 @@ for i = 1:n
         if CheapestClean(i,j) > 0
             timeViaCleaning(i,j) = TimeMatrix(i, CheapestClean(i,j)) + TimeMatrix(CheapestClean(i,j),j) + cleaningTime + 2*mountingTime;
             distanceViaCleaning(i,j) = DistanceMatrix(i, CheapestClean(i,j)) + DistanceMatrix(CheapestClean(i,j),j);
-            CostTravelViaCleaning(i,j) = CostMatrix(i, CheapestClean(i,j)) + CostMatrix(CheapestClean(i,j),j);
+            CostTravelViaCleaning(i,j) = CostMatrix(i, CheapestClean(i,j)) + CostMatrix(CheapestClean(i,j),j) + C_min*(cleaningTime + 2*mountingTime);
         end
     end
 end
