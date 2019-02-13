@@ -20,14 +20,14 @@ Terminals = AddressInfo(AddressInfo.IsTerminal == 1,:);
 IDS = [2 7 24]; % BE DEU NL
 Region = string(Countries(IDS));
 
-t_start = datetime(2018,03,15,00,00,00); % Set appropriate time window
-t_end = datetime(2018,03,23,00,00,00);
+t_start = datetime(2018,03,01,00,00,00); % Set appropriate time window
+t_end = datetime(2018,04,01,00,00,00);
 
 % Generate applicable jobs & orders
 [U,I,O,Ws,Wt] = SelectOrders(OrderLists,IDS,t_start,t_end);
 
 % Total tanktainer availability 
-Dstart = [Tanks.ID Tanks.HomeAddressID -10000*ones(size(Tanks.ID,1),1)]; %Release times in 3 column - zeros(size(Tanks.ID,1),1)
+Dstart = [Tanks.ID Tanks.HomeAddressID zeros(size(Tanks.ID,1),1)]; %Release times in 3 column
 
 % Select maximum applicable tanktainers and maximum amount of depot sinks
 Ds = SelectResourcesDs(U,O,Wt,Dstart,t_start,CostTravelViaCleaning,timeViaCleaning,AddressInfo);
@@ -36,9 +36,9 @@ Dt = SelectResourcesDt(U,I,Ws,AddressInfo,Ds,CostMatrix);
 % Get Arc & Cost matrix in order of: Ds Ws I U O Wt Dt
 A = GetArcs(U,I,O,Ws,Wt,Ds,Dt,t_start,AddressInfo,TimeMatrix); % Compatible arcs
 [C,T] = GetCosts(CostMatrix,CostTravelViaCleaning,Ds,Ws,I,U,O,Wt,Dt,AddressInfo,timeViaCleaning,TimeMatrix); %Replace costs to supplier with costs via a cleaning to supplier
-A = [zeros(size(Ds,1)+size(Ws,1)+size(I,1)) ones(size(Ds,1)+size(Ws,1)+size(I,1),size(U,1)+size(O,1)+size(Wt,1)+size(Dt,1));
-     zeros(size(U,1),size(Ds,1)+size(Ws,1)+size(I,1)) ones(size(U,1),size(U,1)+size(O,1)+size(Wt,1)+size(Dt,1))
-     zeros(size(O,1)+size(Wt,1)+size(Dt,1),size(A,1))];
+% A = [zeros(size(Ds,1)+size(Ws,1)+size(I,1)) ones(size(Ds,1)+size(Ws,1)+size(I,1),size(U,1)+size(O,1)+size(Wt,1)+size(Dt,1));
+%      zeros(size(U,1),size(Ds,1)+size(Ws,1)+size(I,1)) ones(size(U,1),size(U,1)+size(O,1)+size(Wt,1)+size(Dt,1))
+%      zeros(size(O,1)+size(Wt,1)+size(Dt,1),size(A,1))];
 
 % Get internal travel & service times
 t_U = diag(TimeMatrix(GetIndex(AddressInfo,U.FromAddressID),GetIndex(AddressInfo,U.ToAddressID))); % sup - cus in U
@@ -61,7 +61,7 @@ ec = minutes([I.DeliveryWindowStart; U.DeliveryWindowStart]-t_start); % Opening 
 lc = minutes([I.DeliveryWindowEnd; U.DeliveryWindowEnd]-t_start); % Closing supplier at set I and U 
 lt = minutes(Wt.DeliveryWindowEnd-t_start); % Closing terminal at set Wt
 
-M = 5*max([ls;lc;lt]);
+M = 2*max([ls;lc;lt]);
 %% Optimization - Solving with Gurobi, implemented with Yalmip
 
 % Selection Logicals - Order: Ds Ws I U O Wt Dt
@@ -94,11 +94,6 @@ adt = sdpvar(size(Ds,1)+size(Ws,1),size(Wt,1)+size(Dt,1),'full'); % Arrival from
 
 % Building the model
 cons = [];
-cons = [cons, 0 <= X <= 1]; % Limit X on domain
-cons = [cons, w_U >= 0]; % Positive waiting times
-cons = [cons, w_I >= 0]; 
-cons = [cons, wb_UO >= 0]; 
-cons = [cons, wb_WD >= 0]; 
 cons = [cons, X <= A]; % Limit X on feasible arcs
 cons = [cons, sum(X(:,B(:,4)|B(:,5)|B(:,6)),1) == 1]; % Sum over all i for set U,O,Wt (indegree)
 cons = [cons, sum(X(:,B(:,7)),1) <= 1]; % Sum over all i for set Dt (indegree)
@@ -111,13 +106,13 @@ cons = [cons, es <= [as_U;as_O] <= ls]; % Applying customer time window for set 
 cons = [cons, ec <= [ac_I;ac_U] <= lc]; % Applying customer time window for set I,U
 cons = [cons, at_Wt <= lt]; % Applying terminal time window for set Wt
 
-cons = [cons, acs <= repmat([ac_I;ac_U] + [sl_I;sl_U] + scl,1,size(acs,2)) + T(B(:,3)|B(:,4),B(:,4)|B(:,5))]; % From any customer in I,U to any supplier in U,O
-cons = [cons, act <= repmat([ac_I;ac_U] + [sl_I;sl_U] + scl,1,size(act,2)) + T(B(:,3)|B(:,4),B(:,6)|B(:,7))]; % From any customer in I,U to any depot in Wt,Dt
+cons = [cons, acs <= repmat([ac_I;ac_U] + [sl_I;sl_U],1,size(acs,2)) + T(B(:,3)|B(:,4),B(:,4)|B(:,5))]; % From any customer in I,U to any supplier in U,O
+cons = [cons, act <= repmat([ac_I;ac_U] + [sl_I;sl_U],1,size(act,2)) + T(B(:,3)|B(:,4),B(:,6)|B(:,7))]; % From any customer in I,U to any depot in Wt,Dt
 cons = [cons, ads <= repmat([at_Ds;at_Ws] + sm ,1,size(ads,2)) + T(B(:,1)|B(:,2),B(:,4)|B(:,5))]; % From any depot in Ds,Ws to any supplier in U,O
 cons = [cons, adt <= repmat([at_Ds;at_Ws] + 2*sm ,1,size(adt,2)) + T(B(:,1)|B(:,2),B(:,6)|B(:,7))]; % From any depot in Ds,Ws to any depot in Wt,Dt
 
-cons = [cons, acs >= repmat([ac_I;ac_U] + [sl_I;sl_U] + scl,1,size(acs,2)) + T(B(:,3)|B(:,4),B(:,4)|B(:,5)) - M*(1-X(B(:,3)|B(:,4),B(:,4)|B(:,5)))]; % From any customer in I,U to any supplier in U,O
-cons = [cons, act >= repmat([ac_I;ac_U] + [sl_I;sl_U] + scl,1,size(act,2)) + T(B(:,3)|B(:,4),B(:,6)|B(:,7)) - M*(1-X(B(:,3)|B(:,4),B(:,6)|B(:,7)))]; % From any customer in I,U to any depot in Wt,Dt
+cons = [cons, acs >= repmat([ac_I;ac_U] + [sl_I;sl_U],1,size(acs,2)) + T(B(:,3)|B(:,4),B(:,4)|B(:,5)) - M*(1-X(B(:,3)|B(:,4),B(:,4)|B(:,5)))]; % From any customer in I,U to any supplier in U,O
+cons = [cons, act >= repmat([ac_I;ac_U] + [sl_I;sl_U],1,size(act,2)) + T(B(:,3)|B(:,4),B(:,6)|B(:,7)) - M*(1-X(B(:,3)|B(:,4),B(:,6)|B(:,7)))]; % From any customer in I,U to any depot in Wt,Dt
 cons = [cons, ads >= repmat([at_Ds;at_Ws] + sm ,1,size(ads,2)) + T(B(:,1)|B(:,2),B(:,4)|B(:,5)) - M*(1-X(B(:,1)|B(:,2),B(:,4)|B(:,5)))]; % From any depot in Ds,Ws to any supplier in U,O
 cons = [cons, adt >= repmat([at_Ds;at_Ws] + 2*sm ,1,size(adt,2)) + T(B(:,1)|B(:,2),B(:,6)|B(:,7)) - M*(1-X(B(:,1)|B(:,2),B(:,6)|B(:,7)))]; % From any depot in Ds,Ws to any depot in Wt,Dt
  
@@ -129,6 +124,16 @@ cons = [cons, acs <= M*X(B(:,3)|B(:,4),B(:,4)|B(:,5))]; % From any customer in I
 cons = [cons, act <= M*X(B(:,3)|B(:,4),B(:,6)|B(:,7))]; % From any customer in I,U to any depot in Wt,Dt
 cons = [cons, ads <= M*X(B(:,1)|B(:,2),B(:,4)|B(:,5))]; % From any depot in Ds,Ws to any supplier in U,O
 cons = [cons, adt <= M*X(B(:,1)|B(:,2),B(:,6)|B(:,7))]; % From any depot in Ds,Ws to any depot in Wt,Dt
+
+cons = [cons, 0 <= X <= 1]; % Limit X on domain
+cons = [cons, w_U >= 0]; % Positive waiting times
+cons = [cons, w_I >= 0]; 
+cons = [cons, wb_UO >= 0]; 
+cons = [cons, wb_WD >= 0]; 
+cons = [cons, acs >= 0]; % Positive arrival times
+cons = [cons, act >= 0]; 
+cons = [cons, adt >= 0]; 
+cons = [cons, ads >= 0]; 
 
 obj = sum(sum(C.*X));
 

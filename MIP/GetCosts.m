@@ -30,6 +30,12 @@ tempTime = TimeMatrix;
 tempTime(toSupplierLog) = 0;
 T_complete = tempTime + timeViaCleaning;
 
+% FromAddressesID = [Ds.HomeAddressID; Ws.FromAddressID; I.ToAddressID; U.ToAddressID; O.ToAddressID; Wt.ToAddressID; Dt];
+% ToAddressesID = [Ds.HomeAddressID; Ws.FromAddressID; I.FromAddressID; U.FromAddressID; O.FromAddressID; Wt.ToAddressID; Dt];
+% FromAddressesIndex  = GetIndex(AddressInfo, FromAddressesID);
+% ToAddressesIndex = GetIndex(AddressInfo, ToAddressesID);
+% T = T_complete(FromAddressesIndex,ToAddressesIndex); % BACKUP METHOD
+
 T_SUT = T_complete(FromAddressesIndex,[ToAddressesIndex_U;ToAddressesIndex]);
 T_UUT = T_complete(FromAddressesIndex_U,[ToAddressesIndex_U;ToAddressesIndex]);
 
