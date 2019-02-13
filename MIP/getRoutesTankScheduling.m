@@ -1,5 +1,5 @@
 function [routesTankScheduling]  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, X)
-X = Xtest;
+
 X = logical(X);
 n.Ds = size(Ds,1);
 n.Dt = size(Dt,1);
