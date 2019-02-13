@@ -146,4 +146,4 @@ end
 
 TotalTime = toc(TotalTime)
 
-[routesTankScheduling]  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, X)
+routesTankScheduling  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, value(X));
