@@ -4,14 +4,14 @@
 % Initialization
 clear vars; clc; close all; yalmip('clear');
 TotalTime = tic;
-load NewData/AddressInfo
-load NewData/LinkingMatrices
-load NewData/Truck_Tank_Info
-load NewData/Orders
-load NewData/InterModals
-load NewData/Orderlists
-load NewData/CostMatrix
-load NewData/CheapestCleaning
+load ../NewData/AddressInfo
+load ../NewData/LinkingMatrices
+load ../NewData/Truck_Tank_Info
+load ../NewData/Orders
+load ../NewData/InterModals
+load ../NewData/Orderlists
+load ../NewData/CostMatrix
+load ../NewData/CheapestCleaning
 
 Tanks = Truck_Tank(Truck_Tank.ResourceType == 'Tank',1:end);
 Terminals = AddressInfo(AddressInfo.IsTerminal == 1,:);
