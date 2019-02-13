@@ -1,4 +1,5 @@
 function [routesTankScheduling]  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, X)
+X = Xtest;
 X = logical(X);
 n.Ds = size(Ds,1);
 n.Dt = size(Dt,1);
@@ -116,6 +117,10 @@ for i = 1:n.Ds + n.Ws + n.I
     end    
 end
 
+%%
+test = orderfields(routesTankScheduling, {'Ds','Ws','I','U','O','Wt','Dt','nodeFromData','nodeFromType'});
+
+routesTankScheduling = rmfield(test,{'nodeFromData','nodeFromType'});
 end
 
 
