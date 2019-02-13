@@ -1,7 +1,7 @@
-clear;
+clear vars;
 clc;
-load('NewData/AddressInfo')
-load('NewData/Truck_Tank_Info')
+load ../NewData/AddressInfo
+load ../NewData/Truck_Tank_Info
 %%
 
 Truck_Tank_Country = Truck_Tank.Truck_Tank_Country;

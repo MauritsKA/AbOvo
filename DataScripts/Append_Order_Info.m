@@ -5,11 +5,11 @@
 %%
 clear;
 clc;
-load('NewData/Orders');    % (mostly unedited) tables which were imported from excel
-load('NewData/Intermodals')
-load('DataHS/LocationInfo')
-load('DataHS/Truck_Tank_Info')
-load('NewData/AddressInfo');    %  Table which was created by us and contains all locations that 
+load('../NewData/Orders');    % (mostly unedited) tables which were imported from excel
+load('../NewData/Intermodals')
+load('../DataHS/LocationInfo')
+load('../DataHS/Truck_Tank_Info')
+load('../NewData/AddressInfo');    %  Table which was created by us and contains all locations that 
                         %  we have distances off
 %%
 flag = 0;

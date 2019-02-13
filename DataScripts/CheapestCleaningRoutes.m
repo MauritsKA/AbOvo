@@ -1,6 +1,6 @@
-load NewData/LinkingMatrices
-load NewData/AddressInfo
-load DataHS/CostsPerKmPerTrucks
+load ../NewData/LinkingMatrices
+load ../NewData/AddressInfo
+load ../DataHS/CostsPerKmPerTrucks
 
 %%
 C_km = mean(CostsPerKm);
