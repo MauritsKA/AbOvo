@@ -1,10 +1,13 @@
-function [U,I,O,Ws,Wt] = SelectOrders(OrderLists,ID,t_start,t_end)
+function [U,I,O,Ws,Wt] = SelectOrders(OrderLists,IDS,t_start,t_end)
 % Select complete region, Exclude transfers of full tanktainers
-U_c = OrderLists(ID).U; % Orders
-O_c = OrderLists(ID).O; % Outgoing Orders
-I_c = OrderLists(ID).I; % Incoming Orders
-Ws_c = OrderLists(ID).Ws; % Incoming empty tanks - part of Source
-Wt_c = OrderLists(ID).Wt; % Outgoing empty tanks - part of Sink
+U_c =[]; O_c=[]; I_c = []; Ws_c =[]; Wt_c =[];
+for i = 1:length(IDS)
+U_c = [U_c; OrderLists(IDS(i)).U]; % Orders
+O_c = [O_c; OrderLists(IDS(i)).O]; % Outgoing Orders
+I_c = [I_c; OrderLists(IDS(i)).I]; % Incoming Orders
+Ws_c = [Ws_c; OrderLists(IDS(i)).Ws]; % Incoming empty tanks - part of Source
+Wt_c = [Wt_c; OrderLists(IDS(i)).Wt]; % Outgoing empty tanks - part of Sink
+end 
 
 % Filter on time
  U_i =1; I_i =1; O_i=1; Ws_i=1; Wt_i=1;
