@@ -3,9 +3,9 @@
 
 % Initialization
 clear vars; clc; close all;
-load NewData/AddressInfo
-load NewData/Orders
-load NewData/InterModals
+load ../NewData/AddressInfo
+load ../NewData/Orders
+load ../NewData/InterModals
 
 % Create empty copy of regular order table for Ingoing, Outgoing and Transit orders
 I  = cell2table(cell(0,12), 'VariableNames', {'CustomerID','OrderID','Quantity1','PickupWindowStart','PickupWindowEnd','DeliveryWindowStart','DeliveryWindowEnd','FromAddressID','ToAddressID','FromCountry','ToCountry','ConnectionName'});

@@ -1,5 +1,5 @@
-load NewData/Orders
-load NewData/AddressInfo
+load ../NewData/Orders
+load ../NewData/AddressInfo
 
 %% Retrieve unique supplier ID's from Order matrix
 FromAddressVec = unique(Orders.FromAddressID);

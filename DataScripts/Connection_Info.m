@@ -1,8 +1,8 @@
-clear all; clc;
-load NewData/AddressInfo
-load NewData/LinkingMatrices
-load NewData/Intermodals
-load NewData/Orders
+clear vars; clc;
+load ../NewData/AddressInfo
+load ../NewData/LinkingMatrices
+load ../NewData/Intermodals
+load ../NewData/Orders
 
 for i = 1:length(Orders.OrderID)
     OrderConnections(i).OrderID = Orders(i,1:end);

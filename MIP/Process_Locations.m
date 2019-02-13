@@ -1,8 +1,8 @@
 %% Creating location matrix from data
 clear vars; clc;
-load DataHS/LocationInfo % All locations
-load DataHS/UsedDistancesComplete % All distances
-load NewData/AddressInfo % All adresses we have to know (small set + 50 missing)
+load ../DataHS/LocationInfo % All locations
+load ../DataHS/UsedDistancesComplete % All distances
+load ../NewData/AddressInfo % All adresses we have to know (small set + 50 missing)
 
 AddressFromID = UsedDistancesComplete.AddressFromID;
 AddressToID = UsedDistancesComplete.AddressToID;
