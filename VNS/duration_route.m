@@ -3,7 +3,7 @@ function [minutes_late,duration] = duration_route(route,windows,travel_time,t_s_
 % opening time of the job and the columns 3 and 4 represent the finishing time
 % of the job. Note that these windows are given such that waiting within
 % the job is as small as possible and are not the real feasible time
-% windows since these can be larger!
+% windows since these can be larger! Column 5 is the job ID (unused in this program)
 % the matrix windows consists of all the real time windows where being late
 % results in infeasibility. The first column represents the opening time 
 % and the second column represents the closing time of the location
