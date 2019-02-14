@@ -1,5 +1,9 @@
 function [routesTankScheduling]  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, X)
 
+load ../NewData/CheapestCleaning
+load ../NewData/AddressInfo
+load ../NewData/CheapestDepot
+
 X = logical(X);
 n.Ds = size(Ds,1);
 n.Dt = size(Dt,1);
@@ -121,6 +125,95 @@ end
 test = orderfields(routesTankScheduling, {'Ds','Ws','I','U','O','Wt','Dt','nodeFromData','nodeFromType'});
 
 routesTankScheduling = rmfield(test,{'nodeFromData','nodeFromType'});
+
+for i = 1:size(routesTankScheduling,2)
+    if size(routesTankScheduling(i).Ds,1)  > 0
+        Addresses(i).S = routesTankScheduling(i).Ds.HomeAddressID;
+        Indexes(i).S = find(AddressInfo.AddressID == Addresses(i).S);
+    end
+    if size(routesTankScheduling(i).Ws ,1) > 0
+        Addresses(i).S = routesTankScheduling(i).Ws.FromAddressID;
+        Indexes(i).S = find(AddressInfo.AddressID == Addresses(i).S);
+    end
+    if size(routesTankScheduling(i).I ,1) > 0
+        Addresses(i).S = routesTankScheduling(i).I.FromAddressID;
+        Indexes(i).S = find(AddressInfo.AddressID == Addresses(i).S);
+    end
+    if size(routesTankScheduling(i).U ,1) > 0 && size(routesTankScheduling(i).O ,1) > 0
+        Addresses(i).Supplier = [routesTankScheduling(i).U.FromAddressID; routesTankScheduling(i).O.FromAddressID];
+        Addresses(i).Customer = routesTankScheduling(i).U.ToAddressID;
+        for j = 1:(size(routesTankScheduling(i).U ,1) + size(routesTankScheduling(i).O ,1)) 
+            Indexes(i).Supplier(j,1) = find(AddressInfo.AddressID == Addresses(i).Supplier(j));
+        end
+        for j = 1:size(routesTankScheduling(i).U ,1)         
+            Indexes(i).Customer(j,1) = find(AddressInfo.AddressID == Addresses(i).Customer(j));
+        end
+    elseif size(routesTankScheduling(i).O ,1) > 0
+        Addresses(i).Supplier = routesTankScheduling(i).O.FromAddressID;
+        for j = 1:size(routesTankScheduling(i).O ,1) 
+            Indexes(i).Supplier(j,1) = find(AddressInfo.AddressID == Addresses(i).Supplier(j));
+        end
+    elseif size(routesTankScheduling(i).U ,1) > 0
+        Addresses(i).Supplier = routesTankScheduling(i).U.FromAddressID;
+        Addresses(i).Customer = routesTankScheduling(i).U.ToAddressID;
+        for j = 1:size(routesTankScheduling(i).U ,1)  
+            Indexes(i).Supplier(j,1) = find(AddressInfo.AddressID == Addresses(i).Supplier(j));
+            Indexes(i).Customer(j,1) = find(AddressInfo.AddressID == Addresses(i).Customer(j));
+        end
+    end
+end
+
+
+Addresses = orderfields(Addresses, {'S','Supplier','Customer'});
+Indexes = orderfields(Indexes, {'S','Supplier','Customer'});
+
+%% Calculate pairs of pickup - supplier routes
+for i = 1:size(routesTankScheduling,2)
+    if size(Indexes(i).Supplier ,1) == 1
+        Indexes(i).Pairs = [Indexes(i).S, Indexes(i).Supplier];
+    end
+    if size(Indexes(i).Supplier ,1) > 1
+        Indexes(i).Pairs(1,1:2) = [Indexes(i).S, Indexes(i).Supplier(1,1)];
+        for j = 2:size(Indexes(i).Supplier ,1)
+            Indexes(i).Pairs(j,1:2) = [Indexes(i).Customer(j-1), Indexes(i).Supplier(j,1)];
+        end
+    end
+end
+
+%% Assign Cleanings
+for i = 1:size(routesTankScheduling,2)
+    if size(Indexes(i).Pairs ,1) > 0
+        for j = 1:size(Indexes(i).Pairs ,1)
+            Indexes(i).Cleaning(j,1) = CheapestClean(Indexes(i).Pairs(j,1),Indexes(i).Pairs(j,2));
+        end
+    end
+end
+
+for i = 1:size(routesTankScheduling,2)
+    if size(Indexes(i).Cleaning ,1) > 0
+        for j = 1:size(Indexes(i).Cleaning ,1)
+            routesTankScheduling(i).cleaningAddress(j,1) = AddressInfo.AddressID(Indexes(i).Cleaning(j));
+        end
+    end
+    routesTankScheduling(i).directCleaning = false;
+end
+
+%% Assign Depots
+for i = 1:size(routesTankScheduling,2)
+    if size(routesTankScheduling(i).U ,1) > 0
+        for j = 1:size(routesTankScheduling(i).U ,1)
+            tempSupplierID = routesTankScheduling(i).U.FromAddressID(j);
+            tempSupplierIndex = find(AddressInfo.AddressID == tempSupplierID);
+            tempCustomerID = routesTankScheduling(i).U.ToAddressID(j);
+            tempCustomerIndex = find(AddressInfo.AddressID == tempCustomerID);
+            tempDepotIndex = cheapestDepot(tempSupplierIndex, tempCustomerIndex);
+            routesTankScheduling(i).depotAddress(j,1) = AddressInfo.AddressID(tempDepotIndex);
+        end
+    end
+    routesTankScheduling(i).depotUsed = false;
+end
+
+
 end
 
 
