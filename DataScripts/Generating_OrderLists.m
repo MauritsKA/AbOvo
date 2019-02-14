@@ -97,4 +97,23 @@ for i = 1:size(EmptyIntermodals,1)
     OrderLists(kFrom).Wt = [OrderLists(kFrom).Wt;Incoming];
 end
 
+%% add loading times
 
+SL_VAR = 1; % (Un)loading per gravity unit [Minutes]
+SL_FIX = 18; % Fixed (un)loading [Minutes]
+UNIT = 1000; %[L]
+
+for i = 1:size(OrderLists,2)
+   if size(OrderLists(i).U,1) > 0
+       OrderLists(i).U.loadTime = OrderLists(i).U.Quantity1 / UNIT * SL_VAR + SL_FIX;
+   end
+   
+   if size(OrderLists(i).O,1) > 0
+       OrderLists(i).O.loadTime = OrderLists(i).O.Quantity1 / UNIT * SL_VAR + SL_FIX;
+   end
+   
+   if size(OrderLists(i).I,1) > 0
+       OrderLists(i).I.loadTime = OrderLists(i).I.Quantity1 / UNIT * SL_VAR + SL_FIX;
+   end
+    
+end
