@@ -21,7 +21,7 @@ IDS = [2 7 24]; % BE DEU NL
 Region = string(Countries(IDS));
 
 t_start = datetime(2018,03,01,00,00,00); % Set appropriate time window
-t_end = datetime(2018,04,01,00,00,00);
+t_end = datetime(2018,03,23,00,00,00);
 
 % Generate applicable jobs & orders
 [U,I,O,Ws,Wt] = SelectOrders(OrderLists,IDS,t_start,t_end);
