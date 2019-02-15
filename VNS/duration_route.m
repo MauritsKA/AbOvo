@@ -92,6 +92,3 @@ duration = travel_time(1)+route(1,3)-route(1,1)+departure(n)-...
     departure(1)+travel_time(n+1);
 % relevant to return departures of jobs? it is jobs not all locations
 end
-
-
-
