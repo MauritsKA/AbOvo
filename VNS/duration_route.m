@@ -4,7 +4,7 @@ function [minutes_late,duration] = duration_route(route,windows,travel_time,t_s_
 % of the job. Note that these windows are given such that waiting within
 % the job is as small as possible and are not the real feasible time
 % windows since these can be larger! Column 5 is the job ID (unused in this program)
-% the matrix windows consists of all the real time windows where being late
+% The matrix windows consists of all the real time windows where being late
 % results in infeasibility. The first column represents the opening time 
 % and the second column represents the closing time of the location
 % travel_time is a column vector with the travel time between initial
@@ -22,9 +22,8 @@ slack = zeros(n,1); % amount of time that you need to wait between job i and the
 % slack n is therefore 0
 minutes_late = inf;
 infeas = 0;
-x = route(2:end,1)-flip(travel_time(2:end-1));
-% preferred departure time at job i from the point of view of job i+1
-% x is n-1 by 1
+x = route(2:end,1)-flip(travel_time(2:end-1)); % preferred departure time at job i from the point of view 
+% of job i+1. x is n-1 by 1
 for i = 1:n-1
     j = n-i;
     if route(j,3) <= x(j) && x(j) <= route(j,4)
