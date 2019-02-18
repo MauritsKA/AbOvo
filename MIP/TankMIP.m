@@ -149,6 +149,7 @@ else
     yalmiperror(res.problem)
 end
 
-TotalTime = toc(TotalTime)
-
 routesTankScheduling  = getRoutesTankScheduling(Ds, Ws, I, U, O, Wt, Dt, value(X));
+routesTankScheduling = getDirectness(routesTankScheduling, AddressInfo, TimeMatrix, DistanceMatrix);
+
+TotalTime = toc(TotalTime)
