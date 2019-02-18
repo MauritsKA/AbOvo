@@ -2,7 +2,7 @@
 % Group 5 - OR - Erasmus University Rotterdam
 
 % Initialization
-clear vars; clc; close all; yalmip('clear');
+clear all; clc; close all; yalmip('clear');
 TotalTime = tic;
 load ../NewData/AddressInfo
 load ../NewData/LinkingMatrices
@@ -21,10 +21,10 @@ IDS = [2 7 24]; % BE DEU NL
 Region = string(Countries(IDS));
 
 t_start = datetime(2018,03,01,00,00,00); % Set appropriate time window
-t_end = datetime(2018,03,23,00,00,00);
+t_end = datetime(2018,03,25,00,00,00);
 
 % Generate applicable jobs & orders
-[U,I,O,Ws,Wt] = SelectOrders(OrderLists,IDS,t_start,t_end);
+[U,I,O,Ws,Wt,Tfull] = SelectOrders(OrderLists,IDS,t_start,t_end);
 
 % Total tanktainer availability 
 Dstart = [Tanks.ID Tanks.HomeAddressID zeros(size(Tanks.ID,1),1)]; %Release times in 3 column
