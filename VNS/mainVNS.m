@@ -15,8 +15,10 @@ Trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 % Convert job schedule to job matrix
 [jobsW, jobsT] = getJobsMatrix(jobs,t_0);
 %%
-idt = 5; % Select a truck
-idj = [13 17]; % Select a few jobs 
+rng(1)
+for i = 1:100
+idt = randi(size(Trucks,1),1,1); % Select a truck
+idj = randi(size(jobsW,1),randi(5,1,1),1)'; % Select a few jobs 
 jobWS = jobsW(idj,:);
 jobsTS = jobsT(idj,:);
 
@@ -27,7 +29,10 @@ routeT = jobsTS(In,:); % same
 travelTime = TimeMatrix(sub2ind(size(TimeMatrix),[getIndex(Trucks.HomeAddressID(idt));routeW(:,3)],[routeW(:,2);getIndex(Trucks.HomeAddressID(idt))]));
 travelTime(travelTime == 0) = 5; 
 
-[minutesLate,duration] = getDuration(routeW(:,5:end),routeT(:,2:end),travelTime);
+[realArr,minutesLate,duration,CHECKearly,CHECKdur]  = getDuration(routeW(:,5:end),routeT(:,2:end),travelTime);
+
+RESULT(i,:) = [idt, CHECKearly, CHECKdur, minutesLate, duration];
+end 
 %%
 % FOR EACH PARTICLE
 % Initialize decision variable x_ij - Job i belonging to truck j

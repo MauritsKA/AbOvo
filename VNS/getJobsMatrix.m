@@ -33,8 +33,8 @@ jobsW = [jobsW(:,1:2) routeMean jobsW(:,3:end)];
 INDEX = 1:size(jobs,2);
 
 % Remove (empty) jobs with equal start & end location and just 4 timewindows
-INDEX = INDEX(~(jobsW(:,1) == jobsW(:,2) & sum(jobsW(:,3:end) > 0,2) == 4))';
-jobsW = jobsW(~(jobsW(:,1) == jobsW(:,2) & sum(jobsW(:,3:end) > 0,2) == 4),:);
+INDEX = INDEX(~(jobsW(:,1) == jobsW(:,2) & sum(jobsW(:,4:end) > 0,2) == 4))';
+jobsW = jobsW(~(jobsW(:,1) == jobsW(:,2) & sum(jobsW(:,4:end) > 0,2) == 4),:);
 
 jobsW(isnan(jobsW(:,3)),3) = inf; % Set empty repositioning to inf mean time -> always perform as last task
 jobsW = [INDEX jobsW];

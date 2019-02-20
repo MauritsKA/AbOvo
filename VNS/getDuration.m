@@ -1,4 +1,4 @@
-function [minutesLate,duration] = getDuration(windows,workingTime,travelTime)
+function [realArr,minutesLate,duration,CHECKfeas,CHECKdur] = getDuration(windows,workingTime,travelTime)
 
 % Permute timewindows [open; close] in chronological order
 a=windows(:,1:2:end)';
@@ -26,7 +26,9 @@ closingT = repmat(wd(2,:),size(wd,2),1).*trianRev; % Repetition of closing times
 tooLate = posArrivalsRev(:,2:end) > closingT(:,1:end-1); % Given you start in i, are you later than the closing of task j (i-1) 
 index = 1:size(wd,2)-1; 
 
-backtrackRow = max(repmat(sum(tooLate,1)+1,size(wd,2)-1,1).*triu(ones(size(wd,2)-1)),[],2)';
+[~,Iupper] = max(~tooLate,[],1);
+
+backtrackRow = max(repmat(Iupper,size(wd,2)-1,1).*triu(ones(size(wd,2)-1)),[],2)';
 
 tempArr = posArrivalsRev(sub2ind(size(posArrivalsRev),backtrackRow,2:size(wd,2))); % Take all possible arrivals that are selected (backtracking)
 tempArr(index(tempArr == 0)) =wd(2,index(tempArr == 0)); % Replace all reset point with closing time windows
@@ -53,25 +55,20 @@ realArr = selectedTimes(sub2ind(size(posArrivals),fixedI,1:size(wd,2))); % Set n
 
 index2=1:size(wd,2);
 first = min(index2(diff(fixedI) > 0)); % First index before first pulled forward feasibility repair
-temp = flipud(cumSRev);
 
-repullcumSRev=flipud(temp(1:first+1,1:first+1)); % Select rev cum service time up to first feasibility repair
-repullClose=[repmat(realArr(first+1),1,first+1); repmat(flipud(wd(2,1:first)'),1,first+1)]; % first row opening, other rows close
-possiblePulls = (repullClose-repullcumSRev).*fliplr(triu(ones(first+1))); % Maximum time you can leave to make repair
-% Check if repull delivers a later departure then current, but if it is still within windows
-repullOnTime = possiblePulls(1:end-1,2:end) > repmat(realArr(1:first),first,1) & possiblePulls(1:end-1,2:end) <= fliplr(repullClose(2:end,2:end)');
+maxSlack = wd(2,1:first) - realArr(1:first); % Check all slack time every task has up to close window 
+initialSlack = realArr(first+1) - s(first+1) - realArr(first); % Check slack created by first pushed forward task (for feasibility)
+appliedRepull = min([initialSlack maxSlack]); % Check from complete task list the minimum slack of all 
+realArr(1:first) = realArr(1:first)+appliedRepull; % Apply on all up to first, because their windows are already tight
 
-satisfyAll = sum(repullOnTime,2) == sum(triu(ones(first)),2); % Check if any row has a complete feasible repull
-newStart = min(possiblePulls(satisfyAll,1));
-keep = isempty(newStart); % Check if any new optimal start found
-newStart(isempty(newStart)) = 0; 
-realArr(1) = realArr(1)*keep + newStart*(1-keep); % Then replace that value
+minArr = [realArr(1) realArr(1:end-1)+s(2:end-1)]; % Earliest time you could arrive at next destination given time now
+feas = minArr > realArr*1.001; % Check if any next arrival is earlier then earliest possible
+CHECKfeas = sum(feas);
 
-realArr
-minArr = realArr(1:end-1)+s(2:end-1);
-Exists = minArr > realArr(2:end)
+late = realArr > wd(2,:); % Check all task that are late
+minutesLate = sum(realArr(late) - wd(2,late)); % Calculate lateness
 
-duration=1;
-late = realArr > wd(2,:)
-minutesLate = sum(realArr(late) - wd(2,late))
+minDuration = (wd(1,end)-wd(2,1))+s(1)+s(end); % Min duration is latest opening - first closing + travel times from and to home
+duration= realArr(end)+s(end) - (realArr(1)-s(1)); % Actual duraction is first arrival minus home to, up to last arrival plus to home
+CHECKdur = duration < minDuration; % Duration should never be smaller than minimum
 end 
