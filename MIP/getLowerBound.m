@@ -1,52 +1,47 @@
-function [LB] = getLowerBound(OrderLists, AddressInfo, CheapestClean, CostMatrix, DistanceMatrix, TimeMatrix)
-
-U = [];
-I = [];
-O = [];
-T = [];
+function [LB] = getLowerBound(U,I,O,T, AddressInfo, CheapestClean, CostMatrix, DistanceMatrix, TimeMatrix)
 
 C_km = 0.9320;
 C_min = 20/60;
 cleaningTime = 120;
 mountingTime = 36;
 %% Retrieve U, O, I, T from orderlists
-for i = 1:size(OrderLists,2)
-    if size(OrderLists(i).U,1) > 0
-        for j = 1:size(OrderLists(i).U.FromCountry,1)
-            if OrderLists(i).U.FromCountry(j) == categorical(OrderLists(i).Name)
-                Utemp = OrderLists(i).U(j,:);
-                U = [U; Utemp];
-            end
-        end
-    end
-    
-     if size(OrderLists(i).O,1) > 0
-        for j = 1:size(OrderLists(i).O.FromCountry,1)
-            if OrderLists(i).O.FromCountry(j) == categorical(OrderLists(i).Name)
-                Otemp = OrderLists(i).O(j,:);
-                O = [O; Otemp];
-            end
-        end
-     end
-    
-      if size(OrderLists(i).I,1) > 0
-        for j = 1:size(OrderLists(i).I.FromCountry,1)
-            if OrderLists(i).I.FromCountry(j) == categorical(OrderLists(i).Name)
-                Itemp = OrderLists(i).I(j,:);
-                I = [I; Itemp];
-            end
-        end
-      end
-    
-    if size(OrderLists(i).T,1) > 0
-        for j = 1:size(OrderLists(i).T.FromCountry,1)
-            if OrderLists(i).T.FromCountry(j) == categorical(OrderLists(i).Name)
-                Ttemp = OrderLists(i).T(j,:);
-                T = [T; Ttemp];
-            end
-        end
-    end
-end
+% for i = 1:size(OrderLists,2)
+%     if size(OrderLists(i).U,1) > 0
+%         for j = 1:size(OrderLists(i).U.FromCountry,1)
+%             if OrderLists(i).U.FromCountry(j) == categorical(OrderLists(i).Name)
+%                 Utemp = OrderLists(i).U(j,:);
+%                 U = [U; Utemp];
+%             end
+%         end
+%     end
+%     
+%      if size(OrderLists(i).O,1) > 0
+%         for j = 1:size(OrderLists(i).O.FromCountry,1)
+%             if OrderLists(i).O.FromCountry(j) == categorical(OrderLists(i).Name)
+%                 Otemp = OrderLists(i).O(j,:);
+%                 O = [O; Otemp];
+%             end
+%         end
+%      end
+%     
+%       if size(OrderLists(i).I,1) > 0
+%         for j = 1:size(OrderLists(i).I.FromCountry,1)
+%             if OrderLists(i).I.FromCountry(j) == categorical(OrderLists(i).Name)
+%                 Itemp = OrderLists(i).I(j,:);
+%                 I = [I; Itemp];
+%             end
+%         end
+%       end
+%     
+%     if size(OrderLists(i).T,1) > 0
+%         for j = 1:size(OrderLists(i).T.FromCountry,1)
+%             if OrderLists(i).T.FromCountry(j) == categorical(OrderLists(i).Name)
+%                 Ttemp = OrderLists(i).T(j,:);
+%                 T = [T; Ttemp];
+%             end
+%         end
+%     end
+% end
 
 %% Terminal to terminal
 % Distance/time costs between terminals
