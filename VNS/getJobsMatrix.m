@@ -1,4 +1,4 @@
-function [jobsW,jobsT] = getJobsMatrix(jobs,t_0)
+function [jobsW,jobsT,jobsKM] = getJobsMatrix(jobs,t_0)
 
 tasksLength = zeros(size(jobs,2),1);
 for i= 1:size(jobs,2)
@@ -8,6 +8,7 @@ for i= 1:size(jobs,2)
 end
 maxLength = max(tasksLength); 
 jobsT = zeros(size(jobs,2),maxLength);
+jobsKM = zeros(size(jobs,2),maxLength);
 
 for i= 1:size(jobs,2)
     jobsW(i,1) = jobs(i).addressIndex(1);
@@ -27,6 +28,7 @@ for i= 1:size(jobs,2)
     end  
     
     jobsT(i,1:length(jobs(i).workingT))= jobs(i).workingT;
+    jobsKM(i,1:length(jobs(i).workingT))= jobs(i).workingKM;
 end
 
 jobsW = [jobsW(:,1:2) routeMean jobsW(:,3:end)];
@@ -39,6 +41,7 @@ jobsW = jobsW(~(jobsW(:,1) == jobsW(:,2) & sum(jobsW(:,4:end) > 0,2) == 4),:);
 jobsW(isnan(jobsW(:,3)),3) = inf; % Set empty repositioning to inf mean time -> always perform as last task
 jobsW = [INDEX jobsW];
 jobsT = [INDEX jobsT(INDEX,:)];
+jobsKM = [INDEX jobsKM(INDEX,:)];
 
 end
 

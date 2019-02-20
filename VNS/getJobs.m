@@ -18,7 +18,7 @@ for i = 1:nr_sources
     times_to_cut = times_to_cut +sum(routesTankScheduling(i).directCleaning == 0) + sum(routesTankScheduling(i).depotUsed == 1);
 end
 nr_jobs = times_to_cut + nr_sources + size(Tfull,1);
-jobs(1:nr_jobs) = struct('addressIndex',[],'windowOpen',[],'windowClose',[],'ind',[],'workingT',[],'tasks',[],'sets',[],'tankRouteID',[]);
+jobs(1:nr_jobs) = struct('addressIndex',[],'windowOpen',[],'windowClose',[],'workingKM',[],'workingT',[],'tasks',[],'sets',[],'tankRouteID',[]);
 
 for i = 1:size(routesTankScheduling,2)
     %% SOURCES
@@ -26,7 +26,7 @@ for i = 1:size(routesTankScheduling,2)
         jobs(j).addressIndex = getIndex(routesTankScheduling(i).Ds.HomeAddressID);
         jobs(j).windowOpen = t_0; % RoutesTankScheduling(i).Ds.ReleaseTime;
         jobs(j).windowClose = t_0; % Dummy time to initialize datetime object, updated later
-        jobs(j).ind = 1;
+        jobs(j).workingKM = 0;
         jobs(j).workingT = 0;
         jobs(j).tasks = "dep";
         jobs(j).sets = "Ds";
@@ -36,7 +36,7 @@ for i = 1:size(routesTankScheduling,2)
         jobs(j).addressIndex = getIndex(routesTankScheduling(i).Ws.FromAddressID);
         jobs(j).windowOpen = routesTankScheduling(i).Ws.PickupWindowStart; % RutesTankScheduling(i).Ds.ReleaseTime;
         jobs(j).windowClose = routesTankScheduling(i).Ws.PickupWindowStart; % Dummy time to initialize datetime object, updated later
-        jobs(j).ind = 1;
+        jobs(j).workingKM = 0;
         jobs(j).workingT = 0;
         jobs(j).tasks = "ter";
         jobs(j).sets = "Ws";
@@ -46,7 +46,7 @@ for i = 1:size(routesTankScheduling,2)
         jobs(j).addressIndex = getIndex(routesTankScheduling(i).I.FromAddressID);
         jobs(j).windowOpen = routesTankScheduling(i).I.PickupWindowStart;
         jobs(j).windowClose = routesTankScheduling(i).I.PickupWindowEnd;
-        jobs(j).ind = 1;
+        jobs(j).workingKM = 0;
         jobs(j).workingT = 0;
         jobs(j).tasks = "ter";
         jobs(j).sets = "I";
@@ -55,7 +55,7 @@ for i = 1:size(routesTankScheduling,2)
         jobs(j).addressIndex(end+1) = getIndex(routesTankScheduling(i).I.ToAddressID);
         jobs(j).windowOpen(end+1) = routesTankScheduling(i).I.DeliveryWindowStart;
         jobs(j).windowClose(end+1) = routesTankScheduling(i).I.DeliveryWindowEnd;
-        jobs(j).ind(end+1) = 0;
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
         jobs(j).workingT(end+1) = sm+TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
         jobs(j).tasks(end+1) = "cus";
         jobs(j).sets(end+1) = "I";
@@ -84,7 +84,7 @@ for i = 1:size(routesTankScheduling,2)
                 end
                 jobs(j).windowOpen(end+1) = jobs(j).windowOpen(end)+minutes(1);
                 jobs(j).windowClose(end+1) = jobs(j).windowClose(end)+minutes(1);
-                jobs(j).ind(end+1) = 0;
+                jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
                 jobs(j).tasks(end+1) = "cl";
                 jobs(j).sets(end+1) = "U";
                 
@@ -93,7 +93,7 @@ for i = 1:size(routesTankScheduling,2)
                 jobs(j).addressIndex = jobs(j-1).addressIndex(end);
                 jobs(j).windowOpen = jobs(j-1).windowOpen(end)+minutes(1);
                 jobs(j).windowClose = jobs(j-1).windowClose(end);
-                jobs(j).ind = 1;
+                jobs(j).workingKM = 0;
                 jobs(j).workingT = 0;
                 jobs(j).tasks = "cl";
                 jobs(j).sets = "U";
@@ -121,7 +121,7 @@ for i = 1:size(routesTankScheduling,2)
             end
             jobs(j).tasks(end+1) = "sup";
             jobs(j).sets(end+1) = "U";
-            jobs(j).ind(end+1) = 1; % SHOULD BE ASSESED - CURRENTLY ASSUMPTION
+            jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end)); 
             
             if routesTankScheduling(i).depotUsed(k) == 1 % If via depot
                 % End previous job at depot
@@ -129,7 +129,7 @@ for i = 1:size(routesTankScheduling,2)
                 jobs(j).windowOpen(end+1) = routesTankScheduling(i).U.PickupWindowStart(k)+minutes(1);
                 jobs(j).windowClose(end+1) = routesTankScheduling(i).U.DeliveryWindowEnd(k)-minutes(2);
                 jobs(j).workingT(end+1) = routesTankScheduling(i).U.loadTime(k)+sm+TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
-                jobs(j).ind(end+1) = 0;
+                jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
                 jobs(j).tasks(end+1) = "dep";
                 jobs(j).sets(end+1) = "U";
                 
@@ -139,7 +139,7 @@ for i = 1:size(routesTankScheduling,2)
                 jobs(j).windowOpen = routesTankScheduling(i).U.PickupWindowStart(k)+minutes(2);
                 jobs(j).windowClose = routesTankScheduling(i).U.DeliveryWindowEnd(k)-minutes(1);
                 jobs(j).workingT = 0;
-                jobs(j).ind = 1;
+                jobs(j).workingKM = 0;
                 jobs(j).tasks = "dep";
                 jobs(j).sets = "U";
                 jobs(j).tankRouteID = i;
@@ -156,7 +156,7 @@ for i = 1:size(routesTankScheduling,2)
             if strcmp(jobs(j).tasks(end),"cus")
                 jobs(j).workingT(end) = jobs(j).workingT(end)+routesTankScheduling(i).U.loadTime(k);
             end
-            jobs(j).ind(end+1) = 1; % SHOULD BE ASSESED - CURRENTLY ASSUMPTION
+            jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
             jobs(j).tasks(end+1) = "cus";
             jobs(j).sets(end+1) = "U";
         end
@@ -183,7 +183,7 @@ for i = 1:size(routesTankScheduling,2)
             end
             jobs(j).windowOpen(end+1) = jobs(j).windowOpen(end)+minutes(1);
             jobs(j).windowClose(end+1) = jobs(j).windowClose(end)+minutes(1);
-            jobs(j).ind(end+1) = 0;
+            jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
             jobs(j).tasks(end+1) = "cl";
             jobs(j).sets(end+1) = "O";
             
@@ -192,7 +192,7 @@ for i = 1:size(routesTankScheduling,2)
             jobs(j).addressIndex = jobs(j-1).addressIndex(end);
             jobs(j).windowOpen = jobs(j-1).windowOpen(end)+minutes(1);
             jobs(j).windowClose = jobs(j-1).windowClose(end)+minutes(1);
-            jobs(j).ind = 1;
+            jobs(j).workingKM = 0;
             jobs(j).workingT = 0;
             jobs(j).tasks = "cl";
             jobs(j).sets = "O";
@@ -220,14 +220,14 @@ for i = 1:size(routesTankScheduling,2)
         end
         jobs(j).tasks(end+1) = "sup";
         jobs(j).sets(end+1) = "O";
-        jobs(j).ind(end+1) = 1; % SHOULD BE ASSESED - CURRENTLY ASSUMPTION
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end)); 
         
         % Continue with job. Origin is supplier
         jobs(j).addressIndex(end+1) = getIndex(routesTankScheduling(i).O.ToAddressID);
         jobs(j).windowOpen(end+1) = routesTankScheduling(i).O.DeliveryWindowStart;
         jobs(j).windowClose(end+1) = routesTankScheduling(i).O.DeliveryWindowEnd;
         jobs(j).workingT(end+1) = routesTankScheduling(i).O.loadTime+TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
-        jobs(j).ind(end+1) = 0; % SHOULD BE ASSESED - CURRENTLY ASSUMPTION
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end)); 
         jobs(j).tasks(end+1) = "ter";
         jobs(j).sets(end+1) = "O";
         
@@ -246,7 +246,7 @@ for i = 1:size(routesTankScheduling,2)
                 jobs(j).workingT(end) = jobs(j).workingT(end)+sm+routesTankScheduling(i).I.loadTime;
             end
         end
-        jobs(j).ind(end+1) = 0;
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
         jobs(j).tasks(end+1) = "ter";
         jobs(j).sets(end+1) = "Wt";
         
@@ -264,7 +264,7 @@ for i = 1:size(routesTankScheduling,2)
                 jobs(j).workingT(end) = jobs(j).workingT(end)+sm+routesTankScheduling(i).I.loadTime;
             end
         end
-        jobs(j).ind(end+1) = 0;
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
         jobs(j).tasks(end+1) = "dep";
         jobs(j).sets(end+1) = "Dt";
     end
@@ -277,7 +277,7 @@ j=tempLength+i;
 jobs(j).addressIndex = getIndex(Tfull.FromAddressID(i));
 jobs(j).windowOpen = Tfull.PickupWindowStart(i); 
 jobs(j).windowClose = Tfull.PickupWindowEnd(i); 
-jobs(j).ind = 1;
+jobs(j).workingKM = 0;
 jobs(j).workingT = 0;
 jobs(j).tasks = "ter";
 jobs(j).sets = "T";
@@ -286,7 +286,7 @@ jobs(j).tankRouteID = [];
 jobs(j).addressIndex(end+1) = getIndex(Tfull.ToAddressID(i));
 jobs(j).windowOpen(end+1) = Tfull.DeliveryWindowStart(i); 
 jobs(j).windowClose(end+1) = Tfull.DeliveryWindowEnd(i); 
-jobs(j).ind(end+1) = 1;
+jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
 jobs(j).workingT(end+1) = TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
 jobs(j).tasks(end+1) = "ter";
 jobs(j).sets(end+1) = "T";
