@@ -65,8 +65,6 @@ for i = 1:size(routesTankScheduling,2)
     if ~isempty(routesTankScheduling(i).U) % If from Ds to U
         for k = 1:size(routesTankScheduling(i).U,1)
             
-            jobs(j).windowClose(end) = routesTankScheduling(i).U.PickupWindowEnd(k)-minutes(1); % closing time van cleaning locatie is closing time sup - 1min
-            
             if routesTankScheduling(i).directCleaning(k) == 0 % If indirect cleaning
                 % Closing previous job at cleaning. Origin can be order or depot
                 jobs(j).addressIndex(end+1) = getIndex(routesTankScheduling(i).cleaningAddress(k)); % huidige cleaninglocatie aan de laatste job
@@ -83,7 +81,7 @@ for i = 1:size(routesTankScheduling,2)
                     end
                 end
                 jobs(j).windowOpen(end+1) = jobs(j).windowOpen(end)+minutes(1);
-                jobs(j).windowClose(end+1) = jobs(j).windowClose(end)+minutes(1);
+                jobs(j).windowClose(end+1) = routesTankScheduling(i).U.PickupWindowEnd(k)-minutes(2);
                 jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
                 jobs(j).tasks(end+1) = "cl";
                 jobs(j).sets(end+1) = "U";
@@ -92,12 +90,16 @@ for i = 1:size(routesTankScheduling,2)
                 j = j+1;
                 jobs(j).addressIndex = jobs(j-1).addressIndex(end);
                 jobs(j).windowOpen = jobs(j-1).windowOpen(end)+minutes(1);
-                jobs(j).windowClose = jobs(j-1).windowClose(end);
+                jobs(j).windowClose = routesTankScheduling(i).U.PickupWindowEnd(k)-minutes(1);
                 jobs(j).workingKM = 0;
                 jobs(j).workingT = 0;
                 jobs(j).tasks = "cl";
                 jobs(j).sets = "U";
                 jobs(j).tankRouteID = i;
+            else
+                if strcmp(jobs(j).tasks(end),"dep") || strcmp(jobs(j).tasks(end),"ter") % Alleen vorige eindtijd aanpassen als het een depot is
+                    jobs(j).windowClose(end) = routesTankScheduling(i).U.PickupWindowEnd(k)-minutes(1); % closing time van depot locatie is closing time sup - 1min
+                end
             end
             
             % Continue with job. Origin can be both new job from indirect cleaning, previous customer or depot
@@ -121,7 +123,7 @@ for i = 1:size(routesTankScheduling,2)
             end
             jobs(j).tasks(end+1) = "sup";
             jobs(j).sets(end+1) = "U";
-            jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end)); 
+            jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
             
             if routesTankScheduling(i).depotUsed(k) == 1 % If via depot
                 % End previous job at depot
@@ -164,8 +166,8 @@ for i = 1:size(routesTankScheduling,2)
     
     %% SINKS
     if ~isempty(routesTankScheduling(i).O)
-        
-        jobs(j).windowClose(end) = routesTankScheduling(i).O.PickupWindowEnd-minutes(1); % closing time van cleaning locatie is closing time sup - 1min
+        % ERROR
+        %jobs(j).windowClose(end) = routesTankScheduling(i).O.PickupWindowEnd-minutes(1); % closing time van cleaning locatie is closing time sup - 1min
         if routesTankScheduling(i).directCleaning(end) == 0 % If indirect cleaning
             % Closing previous job at cleaning. Origin can be order or depot
             jobs(j).addressIndex(end+1) = getIndex(routesTankScheduling(i).cleaningAddress(k)); % huidige cleaninglocatie aan de laatste job
@@ -182,7 +184,7 @@ for i = 1:size(routesTankScheduling,2)
                 end
             end
             jobs(j).windowOpen(end+1) = jobs(j).windowOpen(end)+minutes(1);
-            jobs(j).windowClose(end+1) = jobs(j).windowClose(end)+minutes(1);
+            jobs(j).windowClose(end+1) = routesTankScheduling(i).O.PickupWindowEnd-minutes(2);
             jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
             jobs(j).tasks(end+1) = "cl";
             jobs(j).sets(end+1) = "O";
@@ -191,12 +193,16 @@ for i = 1:size(routesTankScheduling,2)
             j = j+1;
             jobs(j).addressIndex = jobs(j-1).addressIndex(end);
             jobs(j).windowOpen = jobs(j-1).windowOpen(end)+minutes(1);
-            jobs(j).windowClose = jobs(j-1).windowClose(end)+minutes(1);
+            jobs(j).windowClose = routesTankScheduling(i).O.PickupWindowEnd-minutes(1);
             jobs(j).workingKM = 0;
             jobs(j).workingT = 0;
             jobs(j).tasks = "cl";
             jobs(j).sets = "O";
             jobs(j).tankRouteID = i;
+        else
+            if strcmp(jobs(j).tasks(end),"dep") || strcmp(jobs(j).tasks(end),"ter") % Alleen vorige eindtijd aanpassen als het een depot is
+                jobs(j).windowClose(end) = routesTankScheduling(i).O.PickupWindowEnd-minutes(1); % closing time van depot locatie is closing time sup - 1min
+            end
         end
         
         % Continue with job. Origin can be both new job from indirect cleaning, previous customer or depot
@@ -220,14 +226,14 @@ for i = 1:size(routesTankScheduling,2)
         end
         jobs(j).tasks(end+1) = "sup";
         jobs(j).sets(end+1) = "O";
-        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end)); 
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
         
         % Continue with job. Origin is supplier
         jobs(j).addressIndex(end+1) = getIndex(routesTankScheduling(i).O.ToAddressID);
         jobs(j).windowOpen(end+1) = routesTankScheduling(i).O.DeliveryWindowStart;
         jobs(j).windowClose(end+1) = routesTankScheduling(i).O.DeliveryWindowEnd;
         jobs(j).workingT(end+1) = routesTankScheduling(i).O.loadTime+TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
-        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end)); 
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
         jobs(j).tasks(end+1) = "ter";
         jobs(j).sets(end+1) = "O";
         
@@ -273,21 +279,21 @@ end
 tempLength = size(jobs,2)-size(Tfull,1);
 
 for i = 1:size(Tfull,1)
-j=tempLength+i;
-jobs(j).addressIndex = getIndex(Tfull.FromAddressID(i));
-jobs(j).windowOpen = Tfull.PickupWindowStart(i); 
-jobs(j).windowClose = Tfull.PickupWindowEnd(i); 
-jobs(j).workingKM = 0;
-jobs(j).workingT = 0;
-jobs(j).tasks = "ter";
-jobs(j).sets = "T";
-jobs(j).tankRouteID = [];
-
-jobs(j).addressIndex(end+1) = getIndex(Tfull.ToAddressID(i));
-jobs(j).windowOpen(end+1) = Tfull.DeliveryWindowStart(i); 
-jobs(j).windowClose(end+1) = Tfull.DeliveryWindowEnd(i); 
-jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
-jobs(j).workingT(end+1) = TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
-jobs(j).tasks(end+1) = "ter";
-jobs(j).sets(end+1) = "T";
-end 
+    j=tempLength+i;
+    jobs(j).addressIndex = getIndex(Tfull.FromAddressID(i));
+    jobs(j).windowOpen = Tfull.PickupWindowStart(i);
+    jobs(j).windowClose = Tfull.PickupWindowEnd(i);
+    jobs(j).workingKM = 0;
+    jobs(j).workingT = 0;
+    jobs(j).tasks = "ter";
+    jobs(j).sets = "T";
+    jobs(j).tankRouteID = [];
+    
+    jobs(j).addressIndex(end+1) = getIndex(Tfull.ToAddressID(i));
+    jobs(j).windowOpen(end+1) = Tfull.DeliveryWindowStart(i);
+    jobs(j).windowClose(end+1) = Tfull.DeliveryWindowEnd(i);
+    jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
+    jobs(j).workingT(end+1) = TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
+    jobs(j).tasks(end+1) = "ter";
+    jobs(j).sets(end+1) = "T";
+end

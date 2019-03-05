@@ -3,7 +3,7 @@ function [jobsW,jobsT,jobsKM] = getJobsMatrix(jobs,t_0)
 tasksLength = zeros(size(jobs,2),1);
 for i= 1:size(jobs,2)
     tasksLength(i,1) = length(jobs(i).tasks);  
-    sourceLink(i,1) = strcmp(jobs(i).sets(1),"Ds") | strcmp(jobs(i).sets(1),"Ws") | strcmp(jobs(i).sets(1),"I");
+    sourceLink(i,1) = strcmp(jobs(i).sets(1),"Ds");% | strcmp(jobs(i).sets(1),"Ws") | strcmp(jobs(i).sets(1),"I");
     DtLink(i,1) = jobs(i).sets(end) ==  "Dt";
 end
 maxLength = max(tasksLength); 
@@ -42,6 +42,5 @@ jobsW(isnan(jobsW(:,3)),3) = inf; % Set empty repositioning to inf mean time -> 
 jobsW = [INDEX jobsW];
 jobsT = [INDEX jobsT(INDEX,:)];
 jobsKM = [INDEX jobsKM(INDEX,:)];
-
 end
 

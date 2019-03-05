@@ -1,4 +1,4 @@
-function [realArr,minutesLate,duration,CHECKfeas,CHECKdur] = getDuration(windows,workingTime,travelTime)
+function [realArr,minutesLate,duration] = getDuration(windows,workingTime,travelTime)
 
 % Permute timewindows [open; close] in chronological order
 a=windows(:,1:2:end)';
@@ -13,7 +13,7 @@ workingTime(:,1) = travelTime(1:end-1);
 c = workingTime';
 c = c(:)';
 s=[c(c>0) travelTime(end)];
-s(s == 0) = 5;
+s(s == 0) = 1;
 
 % Push back 
 trianRev = fliplr(triu(ones(size(wd,2)))); % Upper left triangle for reverse
@@ -63,7 +63,7 @@ realArr(1:first) = realArr(1:first)+appliedRepull; % Apply on all up to first, b
 
 minArr = [realArr(1) realArr(1:end-1)+s(2:end-1)]; % Earliest time you could arrive at next destination given time now
 feas = minArr > realArr*1.001; % Check if any next arrival is earlier then earliest possible
-CHECKfeas = sum(feas);
+CHECKfeas = sum(feas); 
 
 late = realArr > wd(2,:); % Check all task that are late
 minutesLate = sum(realArr(late) - wd(2,late)); % Calculate lateness
