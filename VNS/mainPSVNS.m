@@ -9,15 +9,15 @@ load ../NewData/TruckJobs
 load ../NewData/Linkingmatrices
 load ../NewData/Truck_Tank_info
 load ../DataHS/CostsPerKmPerTrucks
-load particle_initial_Solutions
+load initial_particles
 
 t_0 = datetime(2018,03,0,00,00,00);
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
 
 % Select trucks, remove table and pre convert tank adresses
-trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:); clear Truck_Tank
-truckHomes = getIndex(trucks.HomeAddressID);
+trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
+truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
 
 % Convert tanktaniner schedules to Job schedule
 % Run getJobs.m
@@ -53,68 +53,72 @@ routeIndex = 1:size(particle(1).X,2);
 for i = 1:size(particle,2) % For each particle
     for j=routeIndex(sum(particle(i).X,1) > 0) % For all routes with at least one job
         
-        subsetJobs = logical(particle(i).X(:,j));
+        routes = particle(i).X;
+        routeID = j;
+        [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
         
-        jobsWS = jobsW(subsetJobs,:); % Pick subsets
-        jobsTS = jobsT(subsetJobs,:);
-        jobsKMS = jobsKM(subsetJobs,:);
-        
-        [~,In] = sort(jobsWS(:,4)); % Sort based on mean times 
-        routeW = jobsWS(In,:); % Sort job subset 
-        routeT = jobsTS(In,:); % Equally sort corresponding service times
-        
-        if j <= size(particle(1).X,2)-size(jobsW,1) % FIRST TRUCKS ARE DEEMED CHARTER
-            idTruck = j; % If the truck is not a charter, get truck id
-            travelTime = TimeMatrix(sub2ind(size(TimeMatrix),[truckHomes(idTruck);routeW(:,3)],[routeW(:,2);truckHomes(idTruck)]));
-            travelDistance = DistanceMatrix(sub2ind(size(DistanceMatrix),[truckHomes(idTruck);routeW(:,3)],[routeW(:,2);truckHomes(idTruck)]));
-            travelTime(travelTime == 0) = 1;
-        else
-            travelTime = [1;TimeMatrix(sub2ind(size(TimeMatrix),routeW(2:end,3),routeW(1:end-1,2)));1]; % Add artificial traveling minutes for charters
-            travelDistance = DistanceMatrix(sub2ind(size(DistanceMatrix),routeW(2:end,3),routeW(1:end-1,2)));
-            travelTime(travelTime == 0) = 1;
-        end
-        
-        totalDistance = sum(sum(jobsKMS(:,2:end))) + sum(travelDistance);
-        
-        % Retrieve lateness and duration 
-        [realArr,minutesLate,duration]  = getDuration(routeW(:,5:end),routeT(:,2:end),travelTime);
-        
-         particle(i).duration(j) = duration;
         particle(i).routeCost(j) = duration*20/60 + totalDistance*truckCost(j) + alpha*minutesLate; % Ommited gamma costs
     end
+    
     particle(i).totalCost = sum(particle(i).routeCost);
-    particle(i).totalduration = sum(particle(i).duration);
+    particle(i).k = 7;
+    Objectives(i,1) = particle(i).totalCost;
 end
 
 
-%% Run the algorithm 
-iterations = 10; 
+%% Run the algorithm
+iterations = 10000;
 
 
-for i = 1:iterations 
+for i = 1:iterations
     clock.iterationTime(i) = tic;
     
-    % Retrieve neighborhood by similarity matrix 
+    % Retrieve neighborhood by similarity matrix
     % getsimilarity()
     
-    for j = size(particle,2) % For each particle 
+    for j = 1:size(particle,2) % For each particle
         % Select k closest neighbours
         
         % IF any close neighbour better
         % DO pathrelinking
         
-        % ELSE IF local best 
+        % ELSE IF local best
         % DO crossexchange
-        % Get cost of affected routes
-        % k = k+1 
+        [Xnew,selectedTrucksID] = CROSS_Exchange(particle(j).X,particle(j).k,0.3);
+        newRouteCost = particle(j).routeCost;
+        
+        for l = 1:length(selectedTrucksID) % Get cost of affected routes
+            routes = Xnew;
+            routeID = selectedTrucksID(l); 
+            
+            if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
+            [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
+            newRouteCost(routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
+            else
+                newRouteCost(routeID) = 0;
+            end 
+        end
+        
+        Objectives(j,i) = particle(j).totalCost;
+        if sum(newRouteCost) < particle(j).totalCost*0.999 % If costs smaller then numeric error set new objective 
+            particle(j).routeCost = newRouteCost;
+            particle(j).totalCost = sum(newRouteCost);
+            particle(j).X = Xnew;
+            Objectives(j,i) = particle(j).totalCost;
+        end 
+        
+        % k = k+1
         
         % IF any solution improved own cost
-        % DO update solution 
+        % DO update solution
         
-    end 
+    end
     
     clock.iterationTime(i) = toc(clock.iterationTime(i));
-end 
-
+end
+improvement = 100*(Objectives(:,end)-Objectives(:,1))./Objectives(:,1);
+mean(improvement)
+min(Objectives(:,1))
+min(Objectives(:,end))
 
 clock.totalTime = toc(clock.totalTime);

@@ -1,9 +1,11 @@
-function [X,selectedTrucksID] = CROSS_Exchange(X,k,charter,minPercentageOwnFleet)
+function [X,selectedTrucksID] = CROSS_Exchange(X,k,minPercentageOwnFleet)
 % This function performs at most k CROSS-exchanges between k+1 trucks on the matrix X. 
 % X is a truck schedule where the rows represent jobs and the columns 
 % represent trucks.
 % charter is the column number of matrix X from which the list of trucks is
 % chartered.
+
+charter = size(X,2)-size(X,1)+1; % Switching point to charters
 
 % determine how many own fleet trucks and how many charters perform cross
 % exchange
@@ -54,3 +56,4 @@ newRoutes = affectedRoutes;
 newRoutes(rowsToMove,:) = [affectedRoutes(rowsToMove,end) affectedRoutes(rowsToMove,1:end-1)];
 
 X(:,selectedTrucksID) = newRoutes;
+end

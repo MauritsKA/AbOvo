@@ -1,4 +1,4 @@
-function [realArr,minutesLate,duration] = getDuration(windows,workingTime,travelTime)
+function [departureTimes,minutesLate,duration] = getDuration(windows,workingTime,travelTime)
 
 % Permute timewindows [open; close] in chronological order
 a=windows(:,1:2:end)';
@@ -69,6 +69,7 @@ late = realArr > wd(2,:); % Check all task that are late
 minutesLate = sum(realArr(late) - wd(2,late)); % Calculate lateness
 
 minDuration = (wd(1,end)-wd(2,1))+s(1)+s(end); % Min duration is latest opening - first closing + travel times from and to home
-duration= realArr(end)+s(end) - (realArr(1)-s(1)); % Actual duraction is first arrival minus home to, up to last arrival plus to home
+duration= realArr(end)+s(end) - (realArr(1)-s(1)); % Actual duration is first arrival minus home to, up to last arrival plus to home
+departureTimes = [(realArr(1)-s(1)) realArr realArr(end)+s(end)];
 CHECKdur = duration < minDuration; % Duration should never be smaller than minimum
 end 
