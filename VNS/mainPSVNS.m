@@ -9,6 +9,7 @@ load ../NewData/TruckJobs
 load ../NewData/Linkingmatrices
 load ../NewData/Truck_Tank_info
 load ../DataHS/CostsPerKmPerTrucks
+load particle_initial_Solutions
 
 t_0 = datetime(2018,03,0,00,00,00);
 alpha = 100; % Tuning parameters for cost function
@@ -34,17 +35,17 @@ bounds.minTimeCost = sum(max(bounds.minTimeWindow,bounds.minServiceTime))*20/60;
 bounds.minDistCostCharter = sum(sum(jobsKM(:,2:end)))*3;
 bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.44;
 bounds.fixedCost = size(jobsW,1)*20;
-bounds.upperBound = bounds.minTimeCost + bounds.minDistCostCharter + bounds.fixedCost;
+%bounds.upperBound = bounds.minTimeCost + bounds.minDistCostCharter + bounds.fixedCost;
 bounds.lowerBound = bounds.minTimeCost + bounds.minDistCostTrucks;
 
 %% Get initial solutions
 % load or call script.
 
 % Particle (with charter initial solution)
-for i = 1:10
-    particle(i).X = [zeros(size(jobsW,1),size(trucks,1)) eye(size(jobsW,1))];
-    particle(i).routeCost = zeros(1,671);
-end
+% for i = 1:2
+%     particle(i).X = [zeros(size(jobsW,1),size(trucks,1)) eye(size(jobsW,1))];
+%     particle(i).routeCost = zeros(1,671);
+% end
 
 routeIndex = 1:size(particle(1).X,2);
 
@@ -78,28 +79,42 @@ for i = 1:size(particle,2) % For each particle
         % Retrieve lateness and duration 
         [realArr,minutesLate,duration]  = getDuration(routeW(:,5:end),routeT(:,2:end),travelTime);
         
+         particle(i).duration(j) = duration;
         particle(i).routeCost(j) = duration*20/60 + totalDistance*truckCost(j) + alpha*minutesLate; % Ommited gamma costs
     end
     particle(i).totalCost = sum(particle(i).routeCost);
+    particle(i).totalduration = sum(particle(i).duration);
 end
 
 
+%% Run the algorithm 
+iterations = 10; 
 
-%%
-% FOR EACH PARTICLE
-% Initialize decision variable x_ij - Job i belonging to truck j
 
-% Retrieve initial solutions x_ij
-% Sort routes -> retrieve lateness & waiting time
-% Calculate costs
+for i = 1:iterations 
+    clock.iterationTime(i) = tic;
+    
+    % Retrieve neighborhood by similarity matrix 
+    % getsimilarity()
+    
+    for j = size(particle,2) % For each particle 
+        % Select k closest neighbours
+        
+        % IF any close neighbour better
+        % DO pathrelinking
+        
+        % ELSE IF local best 
+        % DO crossexchange
+        % Get cost of affected routes
+        % k = k+1 
+        
+        % IF any solution improved own cost
+        % DO update solution 
+        
+    end 
+    
+    clock.iterationTime(i) = toc(clock.iterationTime(i));
+end 
 
-% LOOP
-% Retrieve neighborhood
-% shake and escalate or select local optimum
-% Move in direction of local optimum by path relinking
-% (CROSS-exchange affected)
-% Sort routes -> retrieve lateness & waiting time
-% Calculate costs
-% Move if new solution is improvement compared to old
 
 clock.totalTime = toc(clock.totalTime);
