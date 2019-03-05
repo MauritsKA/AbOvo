@@ -9,6 +9,6 @@ q_jobsWithCharters = sum(q(:,258:end),2);
 similar_charters = p_jobsWithCharters' *  q_jobsWithCharters;
 
 %% Total similar lever
-similarLevel = similar_owntrucks + similar_charters
+similarLevel = similar_owntrucks + similar_charters;
 
 end
