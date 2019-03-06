@@ -1,6 +1,6 @@
-clear all; clc; close all;
-
-load jobsW
+%clear all; clc; close all;
+%%
+%load jobsW
 load ../NewData/Truck_Tank_info
 load ../NewData/LinkingMatrices
 %% Created solutions
@@ -11,7 +11,7 @@ num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK = 10;
 
 %%
 trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
-truckHomes = GetIndex(trucks.HomeAddressID);
+truckHomes = getIndex(trucks.HomeAddressID);
 
 num.Jobs = size(jobsW,1);
 num.Charters = num.Jobs;

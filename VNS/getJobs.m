@@ -170,7 +170,7 @@ for i = 1:size(routesTankScheduling,2)
         %jobs(j).windowClose(end) = routesTankScheduling(i).O.PickupWindowEnd-minutes(1); % closing time van cleaning locatie is closing time sup - 1min
         if routesTankScheduling(i).directCleaning(end) == 0 % If indirect cleaning
             % Closing previous job at cleaning. Origin can be order or depot
-            jobs(j).addressIndex(end+1) = getIndex(routesTankScheduling(i).cleaningAddress(k)); % huidige cleaninglocatie aan de laatste job
+            jobs(j).addressIndex(end+1) = getIndex(routesTankScheduling(i).cleaningAddress(end)); % huidige cleaninglocatie aan de laatste job
             jobs(j).workingT(end+1) = sm+TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
             if strcmp(jobs(j).tasks(end),"dep") || strcmp(jobs(j).tasks(end),"ter")
                 jobs(j).workingT(end) = jobs(j).workingT(end)+sm;

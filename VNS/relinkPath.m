@@ -1,99 +1,100 @@
-function [q_final] = relinkPath(p,q,pTotal,qTotal,pRoutecosts, qRoutecosts,k,numberOfIter)
+function [cFinal, cFinalRouteCosts,cFinalMinutesLate] = relinkPath(guide,c,cRoutecosts,cMinutesLate,k,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha)
+% g = Guiding solution
+% c = Current solution
 
-indexVec = (1:size(p,1))';
-indexCol = (1:size(p,2))';
-qbest = q;
+indexJob = (1:size(guide,1))'; % Index for every job
+indexRoute = (1:size(guide,2))'; % Index for every route
 
-bestvalue = inf(numberOfIter+1,1);
-val_temp = zeros(k,1);
-switches = zeros(numberOfIter,1);
+cStageTotalCosts = inf(numberOfIter+1,1);
+cStageRouteCosts = inf(numberOfIter+1,size(guide,2));
+cStageMinutesLate = inf(numberOfIter+1,size(guide,2));
+switches = zeros(numberOfIter,1); 
 
-bestvalue(1) = qTotal;
+cStage = c; % Set first stage to current solution
+cStageRouteCosts(1,:) = cRoutecosts; % Set first stage route costs to current solution
+cStageTotalCosts(1,:) = sum(cRoutecosts);
+cStageMinutesLate(1,:) = cMinutesLate;
 
-bestRouteCost(1,:) = qRoutecosts;
-
-for j = 1:numberOfIter
+for i = 1:numberOfIter % Number of stages
     
-    qbest_and_p = qbest & p;
-    q_not_p = logical(1 - sum(qbest_and_p,2));
+    % Get all possible switches and permute to random order
+    cStage_and_g = cStage & guide; % Where current stage and guiding solution both have values
+    g_not_cStage =  logical(1 - sum(cStage_and_g,2)); % All jobs that are not performed on same route in g and c
     
-    
-    if sum(q_not_p) == 0
-        [~,indexBestValue] = min(bestvalue);
-        
-        q_final = q;
-        if indexBestValue > 1
-            switchesDone = switches(1:indexBestValue-1);
-            q_final(switchesDone,:) = p(switchesDone,:);
-        end
-        return
-    end
-    index_possible_switches = indexVec(q_not_p);
+    index_possible_switches = indexJob(g_not_cStage); % Indices for jobs
     index_possible_switches_random = index_possible_switches(randperm(length(index_possible_switches)));
     
     maxSwitches = min(k,length(index_possible_switches_random));
-    row_switches = index_possible_switches_random(1:maxSwitches);
+    row_switches = index_possible_switches_random(1:maxSwitches); % Select all indices for switches in this stage
     
-    for i = 1:maxSwitches
-        qtemp = qbest;
-        oldRow = qtemp(row_switches(i),:) > 0;
-        oldCol = indexCol(oldRow);
-        
-        newRow = p(row_switches(i),:) > 0;
-        newCol = indexCol(newRow);
-        
-        qtemp(row_switches(i),:) = p(row_switches(i),:);
-        
-        routes = qtemp;
-        colID = [oldCol newCol];
-        for l = 1:2 % Reset costs for 2 affected columns by ith switch in jth iteration
-            routeID = colID(l);
-            if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
-                [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
-                tempRouteCost(routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
-            else
-                tempRouteCost(routeID) = 0;
-            end
-        end
-        
-        val_temp(i) = sum(tempRouteCost);
-    end
+    % If no switch possible, break all pathrelinking and return overall best
+    if maxSwitches == 0       
+        break 
+    end 
     
-    [bestvalue(j+1),id_best] = min(val_temp);
-    qtemp = qbest; % Previous best solution
-    qtemp(row_switches(id_best),:) = p(row_switches(id_best),:);
+    cBranchRouteCosts = repmat(cStageRouteCosts(i,:),maxSwitches,1); % Initialize branch route costs to stage route costs
+    cBranchMinutesLate = repmat(cStageMinutesLate(i,:),maxSwitches,1);
     
-    oldRow = qtemp(row_switches(id_best),:) > 0;
-    oldCol = indexCol(oldRow);
-    
-    newRow = p(row_switches(id_best),:) > 0;
-    newCol = indexCol(newRow);
+    for j = 1:maxSwitches % Max number of branches, try all switches
+        cBranch = cStage; % First branch is initial stage
         
-    routes = qtemp;
-    colID = [oldCol newCol];
-    for l = 1:2 % Reset costs for 2 affected columns by ith switch in jth iteration
-        routeID = colID(l);
+        % Get two affected routes / columns
+        oldRow = cBranch(row_switches(j),:);
+        oldCol = indexRoute(logical(oldRow)); % Route ID of route from q where job is removed
+        newRow = guide(row_switches(j),:);
+        newCol = indexRoute(logical(newRow)); % Route ID of route from q where job is added
+        
+        % Perform switch
+        cBranch(row_switches(j),:) = newRow; % Create new branch solution with ith switch
+        
+        % Calculate new costs of routes / columns and update branch route costs for jth switch
+        routes = cBranch;
+        routeID = oldCol;
         if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
-            [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
-            bestRouteCost(j+1,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
+            [~,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
+            cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
+            cBranchMinutesLate(j,routeID) = minutesLate;
         else
-            bestRouteCost(j+1,routeID) = 0;
+            cBranchRouteCosts(j,routeID) = 0;
+            cBranchMinutesLate(j,routeID) = 0;
+        end
+        
+        routeID = newCol;
+        if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
+            [~,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
+            cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
+            cBranchMinutesLate(j,routeID) = minutesLate;
+        else
+            cBranchRouteCosts(j,routeID) = 0;
+            cBranchMinutesLate(j,routeID) = 0;
         end
     end
     
-    switches(j) = row_switches(id_best);
-    qbest = qtemp; % New best solution in this stage
+    % Compare total costs of all branches, select best branch and update stage route costs
+    [cStageTotalCosts(i+1), branchBestIndex] = min(sum(cBranchRouteCosts,2));
+    cStageRouteCosts(i+1,:) = cBranchRouteCosts(branchBestIndex,:);
+    cStageMinutesLate(i+1,:) = cBranchMinutesLate(branchBestIndex,:);
     
+    % Update stage with best branch switch
+    cStage(row_switches(branchBestIndex),:) = guide(row_switches(branchBestIndex),:);
+    
+    % Save all stage switches
+    switches(i) = row_switches(branchBestIndex);
 end
 
-[~,indexBestValue] = min(bestvalue);
+% Find the best overall stage
+[~,stageBestIndex] = min(cStageTotalCosts);
 
-q_final = q;
-if indexBestValue > 1
-    switchesDone = switches(1:indexBestValue-1);
-    q_final(switchesDone,:) = p(switchesDone,:);
-    q_finalRouteCost = bestRouteCost(indexBestValue-1,:);
+% Perform all row switches up to overall best stage, and return final solution and route costs
+cFinal = c;
+if stageBestIndex > 1 % If original solution is not the best found
+    switchesDone = switches(1:stageBestIndex-1); % Amount of stages up to overall best
+    cFinal(switchesDone,:) = guide(switchesDone,:);
+    cFinalRouteCosts = cStageRouteCosts(stageBestIndex,:);
+    cFinalMinutesLate = cStageMinutesLate(stageBestIndex,:);
+else
+    cFinalRouteCosts = cRoutecosts;
+    cFinalMinutesLate = cMinutesLate;
 end
-
 
 end
