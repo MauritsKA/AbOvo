@@ -1,6 +1,5 @@
-%clear all; clc; close all;
-%%
-%load jobsW
+function [particle] = createInitialSolutions(jobsW,setTrucks)
+
 load ../NewData/Truck_Tank_info
 load ../NewData/LinkingMatrices
 %% Created solutions
@@ -15,7 +14,7 @@ truckHomes = getIndex(trucks.HomeAddressID);
 
 num.Jobs = size(jobsW,1);
 num.Charters = num.Jobs;
-num.Trucks = size(trucks,1);
+num.Trucks = setTrucks*size(trucks,1);
 
 num.Rows = num.Jobs;
 num.Cols = num.Trucks + num.Charters;
@@ -88,11 +87,13 @@ initSolution.ClosestOwnTruckAndCharters = SolutionTemp;
 %% Create random max 1 per truck
 for i = 1:num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK
 randomJob = randperm(num.Jobs);
-randomJobAssigned = randomJob(1:num.Trucks);
-tempVec = 1:1:num.Trucks;
+randomTruck = randperm(num.Trucks);
+randomJobAssigned = randomJob(1:min(num.Trucks,num.Jobs));
+randomTruckAssigned = randomTruck(1:length(randomJobAssigned));
+%tempVec = 1:1:num.Trucks;
 
 SolutionTemp = zeros(num.Jobs,num.Cols);
-SolutionTemp(sub2ind(size(SolutionTemp),randomJobAssigned,tempVec)) = 1;
+SolutionTemp(sub2ind(size(SolutionTemp),randomJobAssigned,randomTruckAssigned)) = 1;
 
 chartersUsed = num.Jobs - num.Trucks;
 
