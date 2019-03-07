@@ -1,9 +1,7 @@
+function [jobs] = getJobs(routesTankScheduling)
 %% Convert tank schedule to truck jobs
 % Group 5 - OR - Erasmus University Rotterdam
 
-clear all;
-clc;
-load ../NewData/TankSchedule
 load ../NewData/Linkingmatrices
 load ../NewData/TankSets
 
@@ -296,4 +294,6 @@ for i = 1:size(Tfull,1)
     jobs(j).workingT(end+1) = TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
     jobs(j).tasks(end+1) = "ter";
     jobs(j).sets(end+1) = "T";
+end
+
 end

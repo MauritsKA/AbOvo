@@ -5,23 +5,24 @@
 clear all; clc;
 clock.totalTime = tic;
 
-load ../NewData/TruckJobs
 load ../NewData/Linkingmatrices
 load ../NewData/Truck_Tank_info
 load ../DataHS/CostsPerKmPerTrucks
-load initial_particles2
+load initial_particles
 load ../NewData/TankSchedule
 
 t_0 = datetime(2018,03,0,00,00,00);
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
+setTrucks = 1; % Allowed tours per truck
 
 % Select trucks, remove table and pre convert tank adresses
 trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
 
 % Convert tanktaniner schedules to Job schedule
-% Run getJobs.m
+%load ../NewData/TruckJobs 
+jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
 
 % Convert job schedule to job matrix
 [jobsW, jobsT, jobsKM] = getJobsMatrix(jobs,t_0);
@@ -30,16 +31,14 @@ jobsT(jobsT(:,1) == 545 | jobsT(:,1) == 549,:) = [];
 jobsKM(jobsKM(:,1) == 545 | jobsKM(:,1) == 549,:) = [];
 
 % Add costs for charters
-truckCost = [CostsPerKm; 3*ones(size(jobsW,1),1)];
+copiedCost = repmat(CostsPerKm',setTrucks,1);
+truckCost = [copiedCost(:); 3*ones(size(jobsW,1),1)];
 
-%% Lower and upper bound given this specific tank handling
+%% Lower bound given this specific tank handling
 bounds.minTimeWindow = jobsW(sub2ind(size(jobsW),(1:size(jobsW,1))',sum(jobsW > 0,2)-1)) - jobsW(:,6);
 bounds.minServiceTime = sum(jobsT(:,2:end),2);
-
 bounds.minTimeCost = sum(max(bounds.minTimeWindow,bounds.minServiceTime))*20/60;
-bounds.minDistCostCharter = sum(sum(jobsKM(:,2:end)))*3;
 bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.44;
-bounds.fixedCost = size(jobsW,1)*20;
 bounds.lowerBound = bounds.minTimeCost + bounds.minDistCostTrucks;
 
 %% Get initial solutions
@@ -56,7 +55,7 @@ for i = 1:size(particle,2) % For each particle
         routeID = j;
         [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
         
-        particle(i).routeCost(j) = duration*20/60 + totalDistance*truckCost(j) + alpha*minutesLate; % Ommited gamma costs
+        particle(i).routeCost(j) = duration*20/60 + totalDistance*truckCost(j) + alpha*minutesLate + (j>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
         particle(i).minutesLate(j) = minutesLate;
     end
     
@@ -68,12 +67,14 @@ end
 
 
 %% Run the algorithm
-iterations = 20;
+iterations = 100;
 similarityLevel= zeros(size(particle,2),size(particle,2));
 
+fprintf('Running iteration:  ');
 for i = 1:iterations
-    i
-    %clock.iterationTime(i) = tic;
+    iterationTime = tic;
+    
+    fprintf(repmat('\b', 1, numel(num2str(i-1)))); fprintf('%d',i);
     
     for j = 1:size(particle,2) % For each particle
         
@@ -115,9 +116,9 @@ for i = 1:iterations
             particle(j).k = 1; %max(1,k-1);
             
         else % ELSE IF local best: DO crossexchange
-            minOwnFleet = 0.4;
+            minOwnFleet = 0.3;
             particle(j).k = min(11, particle(j).k +1);
-            crossWeight =ceil( 1.5*particle(j).k);
+            crossWeight = particle(j).k;
             [Xnew,selectedTrucksID] = CROSS_Exchange(particle(j).X,crossWeight,minOwnFleet);
             
             % Update cost
@@ -129,7 +130,7 @@ for i = 1:iterations
                 
                 if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
                     [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
-                    newRouteCost(routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
+                    newRouteCost(routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate + (routeID>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
                     newMinutesLate(routeID) = minutesLate;
                 else
                     newRouteCost(routeID) = 0;
@@ -149,11 +150,20 @@ for i = 1:iterations
         objectives(j,i+1) = particle(j).totalCost;
     end
     
-    %clock.iterationTime(i) = toc(clock.iterationTime(i));
+    clock.iterationTime(i) = toc(iterationTime);
 end
+fprintf('\n \n')
+
 improvement = 100*(objectives(:,end)-objectives(:,1))./objectives(:,1);
-mean(improvement);
-min(objectives(:,1));
-min(objectives(:,end));
+fprintf('Mean improvement over all particles: %.2f%% \n',mean(improvement));
+fprintf('Best initial particle cost: %.0f \n',min(objectives(:,1)));
+fprintf('Best optimized particle cost: %.0f \n',min(objectives(:,end)));
+fprintf('Improvement optimal solution: %.2f%% \n',100*(min(objectives(:,end))-min(objectives(:,1)))/min(objectives(:,1)));
+fprintf('Lower bound for this tank handling: %.0f \n',bounds.lowerBound);
+fprintf('Optimality gap optimal solution: %.2f%% \n',100*(min(objectives(:,end))-bounds.lowerBound)/bounds.lowerBound);
+fprintf('\n')
 
 clock.totalTime = toc(clock.totalTime);
+fprintf('Mean iteration time: %.4f seconds \n',mean(clock.iterationTime));
+fprintf('Total clock time: %.4f seconds \n',clock.totalTime);
+

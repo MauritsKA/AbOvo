@@ -52,7 +52,7 @@ for i = 1:numberOfIter % Number of stages
         routeID = oldCol;
         if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
             [~,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
-            cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
+            cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate+ (routeID>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
             cBranchMinutesLate(j,routeID) = minutesLate;
         else
             cBranchRouteCosts(j,routeID) = 0;
@@ -62,7 +62,7 @@ for i = 1:numberOfIter % Number of stages
         routeID = newCol;
         if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
             [~,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
-            cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate; % Ommited gamma costs
+            cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate+ (routeID>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
             cBranchMinutesLate(j,routeID) = minutesLate;
         else
             cBranchRouteCosts(j,routeID) = 0;
