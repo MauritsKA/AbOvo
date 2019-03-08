@@ -10,13 +10,6 @@ load ../NewData/Truck_Tank_info
 load ../DataHS/CostsPerKmPerTrucks
 load ../NewData/TankSchedule
 
-load results/30krun
-Xopt = particle(1).X;
-clear particle objectives
-
-% load ../NewData/DifferentThresholds_RouteTankSchedulingMEGA
-% routesTankScheduling = varTreshholdRouteTankScheduling(8, 1).routesTankScheduling;
-
 t_0 = datetime(2018,03,0,00,00,00);
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
@@ -27,8 +20,8 @@ trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
 
 % Convert tanktaniner schedules to Job schedule
-load ../NewData/TruckJobs 
-%jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
+%load ../NewData/TruckJobs 
+jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
 
 % Convert job schedule to job matrix
 [jobsW, jobsT, jobsKM] = getJobsMatrix(jobs,t_0);
@@ -41,7 +34,7 @@ truckCost = [repmat(CostsPerKm,setTrucks,1); 3*ones(size(jobsW,1),1)];
 
 % Create initial solutions
 particle = createInitialSolutions(jobsW,setTrucks);
-particle(34).X = Xopt;
+particle(size(particle,2)+1).X = particle(size(particle,2)).X;
 
 %% Lower bound given this specific tank handling
 bounds.minTimeWindow = jobsW(sub2ind(size(jobsW),(1:size(jobsW,1))',sum(jobsW > 0,2)-1)) - jobsW(:,6);
@@ -54,36 +47,12 @@ bounds.lowerBound = bounds.minTimeCost + bounds.minDistCostTrucks;
 routeIndex = 1:size(particle(1).X,2);
 
 % Calculate all initial fitness
-for i = 1:size(particle,2) % For each particle
-    particle(i).routeCost = zeros(1,length(routeIndex));
-    particle(i).minutesLate = zeros(1,length(routeIndex));
-    particle(i).latePerTruck = zeros(1,length(truckHomes));
-    particle(i).departureTimes = cell(1,length(routeIndex));
-    particle(i).departureTimes(1,:) = {0};
-    particle(i).meanDeparture = zeros(1,length(routeIndex));
-    
-    for j=routeIndex(sum(particle(i).X,1) > 0) % For all routes with at least one job
-        
-        routes = particle(i).X;
-        routeID = j;
-        [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
-        
-        particle(i).routeCost(j) = duration*20/60 + totalDistance*truckCost(j) + (j>size(routes,2)-size(routes,1))*20 + alpha*minutesLate;
-        particle(i).minutesLate(j) = minutesLate;
-        particle(i).departureTimes{j} = departureTimes;
-        particle(i).meanDeparture(j) = mean(departureTimes);
-    end
-    
-    [particle(i).latePerTruck, particle(i).lateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(i).meanDeparture,particle(i).departureTimes,jobsW);
-    particle(i).totalCost = sum(particle(i).routeCost)+gamma*particle(i).lateViaHome;
-    particle(i).late = sum(particle(i).minutesLate) > 0.001;
-    particle(i).k = 1;
-    objectives(i,1) = particle(i).totalCost;
-end
-
+[particle,objectives] = getInitialFitness(particle,routeIndex,jobsW,jobsT,jobsKM,setTrucks,truckHomes,truckCost,alpha,gamma);
 
 %% Run the algorithm
-iterations = 50;
+iterations = 100;
+breakIteration = 10;
+breakpoints = 0:breakIteration:iterations; 
 similarityLevel= zeros(size(particle,2),size(particle,2));
 
 fprintf('Running iteration:  ');
@@ -182,6 +151,14 @@ for i = 1:iterations
         end 
         objectives(j,i+1) = particle(j).totalCost;
     end
+    
+    if sum(breakpoints == i) > 0 
+      [~,iBest] = min(objectives(:,end));
+      Xopt = particle(iBest).X; 
+      particle = createInitialSolutions(jobsW,setTrucks);
+      particle(size(particle,2)+1).X = Xopt;
+      [particle,~] = getInitialFitness(particle,routeIndex,jobsW,jobsT,jobsKM,setTrucks,truckHomes,truckCost,alpha,gamma);
+    end 
     
     clock.iterationTime(i) = toc(iterationTime);
 end
