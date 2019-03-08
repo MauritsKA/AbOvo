@@ -1,10 +1,11 @@
 function [similarityLevel] = getSimilarity(p,q)
 
 %% Similarity own trucks
-similar_owntrucks = sum(sum(p(:,1:257) & q(:,1:257)));
+lastRegularTruck = size(q,2)-size(q,1); 
+similar_owntrucks = sum(sum(p(:,1:lastRegularTruck) & q(:,1:lastRegularTruck)));
 
 %% Similarity charters
-p_trans_q = p(:,258:end)'*q(:,258:end);
+p_trans_q = p(:,lastRegularTruck+1:end)'*q(:,lastRegularTruck+1:end);
 
 dummy3 = find(p_trans_q);
 

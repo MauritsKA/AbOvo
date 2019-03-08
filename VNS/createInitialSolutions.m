@@ -50,6 +50,9 @@ TimeMatrixJobsTrucksCombiTrans = TimeMatrixJobsTrucksCombi';
 [~,minStartTruck] = min(TimeMatrixJobsTrucksCombiTrans);
 minStartTruck = minStartTruck';
 
+multipleUse = (length(truckHomes)*(randi(setTrucks,1,size(jobsW,1))-1))'; % add random extra indices for re use of truck 
+minStartTruck = minStartTruck+multipleUse; 
+
 SolutionTemp = zeros(num.Jobs,num.Cols);
 SolutionTemp(sub2ind(size(SolutionTemp),jobsIndex,minStartTruck)) = 1;
 

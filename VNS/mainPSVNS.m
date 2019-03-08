@@ -8,8 +8,14 @@ clock.totalTime = tic;
 load ../NewData/Linkingmatrices
 load ../NewData/Truck_Tank_info
 load ../DataHS/CostsPerKmPerTrucks
-load initial_particles
 load ../NewData/TankSchedule
+
+load results/30krun
+Xopt = particle(1).X;
+clear particle objectives
+
+% load ../NewData/DifferentThresholds_RouteTankSchedulingMEGA
+% routesTankScheduling = varTreshholdRouteTankScheduling(8, 1).routesTankScheduling;
 
 t_0 = datetime(2018,03,0,00,00,00);
 alpha = 100; % Tuning parameters for cost function
@@ -21,8 +27,8 @@ trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
 
 % Convert tanktaniner schedules to Job schedule
-%load ../NewData/TruckJobs 
-jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
+load ../NewData/TruckJobs 
+%jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
 
 % Convert job schedule to job matrix
 [jobsW, jobsT, jobsKM] = getJobsMatrix(jobs,t_0);
@@ -30,15 +36,18 @@ jobsW(jobsW(:,1) == 545 | jobsW(:,1) == 549,:) = []; % Remove infeasible reposit
 jobsT(jobsT(:,1) == 545 | jobsT(:,1) == 549,:) = [];
 jobsKM(jobsKM(:,1) == 545 | jobsKM(:,1) == 549,:) = [];
 
-% Add costs for charters
-copiedCost = repmat(CostsPerKm',setTrucks,1);
-truckCost = [copiedCost(:); 3*ones(size(jobsW,1),1)];
+% Add costs for charters and duplicate costs for multiple use of trucks
+truckCost = [repmat(CostsPerKm,setTrucks,1); 3*ones(size(jobsW,1),1)];
+
+% Create initial solutions
+particle = createInitialSolutions(jobsW,setTrucks);
+particle(34).X = Xopt;
 
 %% Lower bound given this specific tank handling
 bounds.minTimeWindow = jobsW(sub2ind(size(jobsW),(1:size(jobsW,1))',sum(jobsW > 0,2)-1)) - jobsW(:,6);
 bounds.minServiceTime = sum(jobsT(:,2:end),2);
 bounds.minTimeCost = sum(max(bounds.minTimeWindow,bounds.minServiceTime))*20/60;
-bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.44;
+bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.80;
 bounds.lowerBound = bounds.minTimeCost + bounds.minDistCostTrucks;
 
 %% Get initial solutions
@@ -48,6 +57,10 @@ routeIndex = 1:size(particle(1).X,2);
 for i = 1:size(particle,2) % For each particle
     particle(i).routeCost = zeros(1,length(routeIndex));
     particle(i).minutesLate = zeros(1,length(routeIndex));
+    particle(i).latePerTruck = zeros(1,length(truckHomes));
+    particle(i).departureTimes = cell(1,length(routeIndex));
+    particle(i).departureTimes(1,:) = {0};
+    particle(i).meanDeparture = zeros(1,length(routeIndex));
     
     for j=routeIndex(sum(particle(i).X,1) > 0) % For all routes with at least one job
         
@@ -55,19 +68,22 @@ for i = 1:size(particle,2) % For each particle
         routeID = j;
         [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
         
-        particle(i).routeCost(j) = duration*20/60 + totalDistance*truckCost(j) + alpha*minutesLate + (j>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
+        particle(i).routeCost(j) = duration*20/60 + totalDistance*truckCost(j) + (j>size(routes,2)-size(routes,1))*20 + alpha*minutesLate;
         particle(i).minutesLate(j) = minutesLate;
+        particle(i).departureTimes{j} = departureTimes;
+        particle(i).meanDeparture(j) = mean(departureTimes);
     end
     
-    particle(i).totalCost = sum(particle(i).routeCost);
-    particle(i).Late = sum(particle(i).minutesLate) > 0.001;
+    [particle(i).latePerTruck, particle(i).lateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(i).meanDeparture,particle(i).departureTimes,jobsW);
+    particle(i).totalCost = sum(particle(i).routeCost)+gamma*particle(i).lateViaHome;
+    particle(i).late = sum(particle(i).minutesLate) > 0.001;
     particle(i).k = 1;
     objectives(i,1) = particle(i).totalCost;
 end
 
 
 %% Run the algorithm
-iterations = 100;
+iterations = 50;
 similarityLevel= zeros(size(particle,2),size(particle,2));
 
 fprintf('Running iteration:  ');
@@ -88,7 +104,7 @@ for i = 1:iterations
         [~,neighbourIndex] = sort(similarityLevel(j,:),'descend');
         
         pickedNeighbours = neighbourIndex(1:3*particle(j).k);
-        neighbourCosts=[];
+        neighbourCosts=zeros(length(pickedNeighbours),1);
         for l = 1:length(pickedNeighbours)
             neighbourCosts(l) = particle(pickedNeighbours(l)).totalCost;
         end
@@ -105,13 +121,18 @@ for i = 1:iterations
             c = particle(j).X;
             cRoutecosts = particle(j).routeCost;
             cMinutesLate = particle(j).minutesLate;
-            [cFinal, cFinalRouteCosts,cFinalMinutesLate] = relinkPath(guide,c,cRoutecosts,cMinutesLate,numberOfBranches,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha);
+            cDepartureTimes = particle(j).departureTimes;
+            cMeanDeparture = particle(j).meanDeparture;
+            [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinaldepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cMinutesLate,cDepartureTimes,cMeanDeparture,numberOfBranches,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha);
             
             particle(j).X = cFinal;
             particle(j).routeCost = cFinalRouteCosts;
-            particle(j).totalCost = sum(cFinalRouteCosts);
             particle(j).minutesLate = cFinalMinutesLate;
-            particle(j).Late = sum(particle(j).minutesLate) > 0.001;
+            particle(j).departureTimes = cFinaldepartureTimes;
+            particle(j).meanDeparture = cFinalMeanDeparture;
+            [particle(j).latePerTruck, particle(j).lateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(j).meanDeparture,particle(j).departureTimes,jobsW);
+            particle(j).totalCost = sum(particle(j).routeCost)+gamma*particle(j).lateViaHome;
+            particle(j).late = sum(cFinalMinutesLate) > 0.001;
             
             particle(j).k = 1; %max(1,k-1);
             
@@ -124,6 +145,8 @@ for i = 1:iterations
             % Update cost
             newRouteCost = particle(j).routeCost; % Initialize with old
             newMinutesLate = particle(j).minutesLate;
+            newDepartureTimes = particle(j).departureTimes;
+            newMeanDeparture = particle(j).meanDeparture;
             for l = 1:length(selectedTrucksID) % Get cost of affected routes
                 routes = Xnew;
                 routeID = selectedTrucksID(l);
@@ -132,17 +155,27 @@ for i = 1:iterations
                     [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
                     newRouteCost(routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate + (routeID>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
                     newMinutesLate(routeID) = minutesLate;
+                    newDepartureTimes{routeID} = departureTimes;
+                    newMeanDeparture(routeID) = mean(departureTimes);
                 else
                     newRouteCost(routeID) = 0;
                     newMinutesLate(routeID) = 0;
+                    newDepartureTimes{routeID} = 0;
+                    newMeanDeparture(routeID) = 0;
                 end
             end
             
-            if sum(newRouteCost) < particle(j).totalCost*0.999 % If costs smaller then numeric error set new objective
+            [newLatePerTruck, newLateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(j).meanDeparture,particle(j).departureTimes,jobsW);
+           
+            if (sum(newRouteCost)+gamma*newLateViaHome) < particle(j).totalCost % If costs smaller then numeric error set new objective
                 particle(j).routeCost = newRouteCost;
-                particle(j).totalCost = sum(newRouteCost);
                 particle(j).minutesLate = newMinutesLate;
-                particle(j).Late = sum(newMinutesLate) > 0.001;
+                particle(j).departureTimes = newDepartureTimes;
+                particle(j).meanDeparture = newMeanDeparture;
+                particle(j).latePerTruck = newLatePerTruck;
+                particle(j).lateViaHome = newLateViaHome;
+                particle(j).totalCost = sum(newRouteCost)+gamma*newLateViaHome;
+                particle(j).late = sum(newMinutesLate) > 0.001;
                 particle(j).X = Xnew;
             end
         

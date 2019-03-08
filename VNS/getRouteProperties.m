@@ -11,7 +11,9 @@ routeW = jobsWS(In,:); % Sort job subset
 routeT = jobsTS(In,:); % Equally sort corresponding service times
 
 if routeID <= size(routes,2)-size(jobsW,1) % FIRST TRUCKS ARE DEEMED REGULAR
-    idTruck = routeID; % If the truck is not a charter, get truck id
+    idTruckOriginal = routeID; % If the truck is not a charter, get truck id
+    idTruck = mod(idTruckOriginal,length(truckHomes)); % Remove the multiples
+    idTruck(idTruck == 0) = length(truckHomes); % Reset last truck to last id
     travelTime = TimeMatrix(sub2ind(size(TimeMatrix),[truckHomes(idTruck);routeW(:,3)],[routeW(:,2);truckHomes(idTruck)]));
     travelDistance = DistanceMatrix(sub2ind(size(DistanceMatrix),[truckHomes(idTruck);routeW(:,3)],[routeW(:,2);truckHomes(idTruck)]));
     travelTime(travelTime == 0) = 1;

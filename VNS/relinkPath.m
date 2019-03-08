@@ -1,4 +1,4 @@
-function [cFinal, cFinalRouteCosts,cFinalMinutesLate] = relinkPath(guide,c,cRoutecosts,cMinutesLate,k,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha)
+function [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinalDepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cMinutesLate,cDepartureTimes,cMeanDeparture,k,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha)
 % g = Guiding solution
 % c = Current solution
 
@@ -8,12 +8,16 @@ indexRoute = (1:size(guide,2))'; % Index for every route
 cStageTotalCosts = inf(numberOfIter+1,1);
 cStageRouteCosts = inf(numberOfIter+1,size(guide,2));
 cStageMinutesLate = inf(numberOfIter+1,size(guide,2));
-switches = zeros(numberOfIter,1); 
+cStageDepartureTimes = cell(numberOfIter+1,size(guide,2));
+cStageMeanDeparture = zeros(numberOfIter+1,size(guide,2));
+switches = zeros(numberOfIter,1);
 
 cStage = c; % Set first stage to current solution
 cStageRouteCosts(1,:) = cRoutecosts; % Set first stage route costs to current solution
 cStageTotalCosts(1,:) = sum(cRoutecosts);
 cStageMinutesLate(1,:) = cMinutesLate;
+cStageDepartureTimes(1,:) = cDepartureTimes;
+cStageMeanDeparture(1,:) = cMeanDeparture;
 
 for i = 1:numberOfIter % Number of stages
     
@@ -28,12 +32,14 @@ for i = 1:numberOfIter % Number of stages
     row_switches = index_possible_switches_random(1:maxSwitches); % Select all indices for switches in this stage
     
     % If no switch possible, break all pathrelinking and return overall best
-    if maxSwitches == 0       
-        break 
-    end 
+    if maxSwitches == 0
+        break
+    end
     
     cBranchRouteCosts = repmat(cStageRouteCosts(i,:),maxSwitches,1); % Initialize branch route costs to stage route costs
     cBranchMinutesLate = repmat(cStageMinutesLate(i,:),maxSwitches,1);
+    cBranchDepartureTimes = repmat(cStageDepartureTimes(i,:),maxSwitches,1);
+    cBranchMeanDeparture = repmat(cStageMeanDeparture(i,:),maxSwitches,1);
     
     for j = 1:maxSwitches % Max number of branches, try all switches
         cBranch = cStage; % First branch is initial stage
@@ -51,22 +57,30 @@ for i = 1:numberOfIter % Number of stages
         routes = cBranch;
         routeID = oldCol;
         if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
-            [~,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
+            [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
             cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate+ (routeID>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
             cBranchMinutesLate(j,routeID) = minutesLate;
+            cBranchDepartureTimes{j,routeID} = departureTimes;
+            cBranchMeanDeparture(j,routeID) = mean(departureTimes);
         else
             cBranchRouteCosts(j,routeID) = 0;
             cBranchMinutesLate(j,routeID) = 0;
+            cBranchDepartureTimes{j,routeID} = 0;
+            cBranchMeanDeparture(j,routeID) = 0;
         end
         
         routeID = newCol;
         if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
-            [~,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
+            [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
             cBranchRouteCosts(j,routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate+ (routeID>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
             cBranchMinutesLate(j,routeID) = minutesLate;
+            cBranchDepartureTimes{j,routeID} = departureTimes;
+            cBranchMeanDeparture(j,routeID) = mean(departureTimes);
         else
             cBranchRouteCosts(j,routeID) = 0;
             cBranchMinutesLate(j,routeID) = 0;
+            cBranchDepartureTimes{j,routeID} = 0;
+            cBranchMeanDeparture(j,routeID) = 0;
         end
     end
     
@@ -74,6 +88,8 @@ for i = 1:numberOfIter % Number of stages
     [cStageTotalCosts(i+1), branchBestIndex] = min(sum(cBranchRouteCosts,2));
     cStageRouteCosts(i+1,:) = cBranchRouteCosts(branchBestIndex,:);
     cStageMinutesLate(i+1,:) = cBranchMinutesLate(branchBestIndex,:);
+    cStageDepartureTimes(i+1,:) = cBranchDepartureTimes(branchBestIndex,:);
+    cStageMeanDeparture(i+1,:) = cBranchMeanDeparture(branchBestIndex,:);
     
     % Update stage with best branch switch
     cStage(row_switches(branchBestIndex),:) = guide(row_switches(branchBestIndex),:);
@@ -92,9 +108,13 @@ if stageBestIndex > 1 % If original solution is not the best found
     cFinal(switchesDone,:) = guide(switchesDone,:);
     cFinalRouteCosts = cStageRouteCosts(stageBestIndex,:);
     cFinalMinutesLate = cStageMinutesLate(stageBestIndex,:);
+    cFinalDepartureTimes = cStageDepartureTimes(stageBestIndex,:);
+    cFinalMeanDeparture = cStageMeanDeparture(stageBestIndex,:);
 else
     cFinalRouteCosts = cRoutecosts;
     cFinalMinutesLate = cMinutesLate;
+    cFinalDepartureTimes = cDepartureTimes;
+    cFinalMeanDeparture = cMeanDeparture;
 end
 
 end
