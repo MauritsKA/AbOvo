@@ -14,6 +14,10 @@ t_0 = datetime(2018,03,0,00,00,00);
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
 setTrucks = 1; % Allowed tours per truck
+stageCode = "max(5,3*particle(j).k)";
+branchCode = "ceil(particle(j).k/2)+2";
+crossWeightCode = "particle(j).k;";
+minOwnFleet = 0.3; % Set percentage of minimum own fleet used in crossover
 
 % Select trucks, remove table and pre convert tank adresses
 trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
@@ -50,7 +54,7 @@ routeIndex = 1:size(particle(1).X,2);
 [particle,objectives] = getInitialFitness(particle,routeIndex,jobsW,jobsT,jobsKM,setTrucks,truckHomes,truckCost,alpha,gamma);
 
 %% Run the algorithm
-iterations = 100;
+iterations = 2;
 breakIteration = 10;
 breakpoints = 0:breakIteration:iterations; 
 similarityLevel= zeros(size(particle,2),size(particle,2));
@@ -83,8 +87,8 @@ for i = 1:iterations
         
         % IF any close neighbour better: DO pathrelinking
         if particle(bestNeighbour).totalCost < particle(j).totalCost
-            numberOfIter = max(5,3*particle(j).k);
-            numberOfBranches = ceil(particle(j).k/2)+2;
+            numberOfStages = max(5,3*particle(j).k);
+            numberOfBranches = ceil(particle(j).k/2)+2; % OOK AANPASSEN BOVEN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             
             guide = particle(bestNeighbour).X;
             c = particle(j).X;
@@ -92,7 +96,7 @@ for i = 1:iterations
             cMinutesLate = particle(j).minutesLate;
             cDepartureTimes = particle(j).departureTimes;
             cMeanDeparture = particle(j).meanDeparture;
-            [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinaldepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cMinutesLate,cDepartureTimes,cMeanDeparture,numberOfBranches,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha);
+            [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinaldepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cMinutesLate,cDepartureTimes,cMeanDeparture,numberOfBranches,numberOfStages,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha);
             
             particle(j).X = cFinal;
             particle(j).routeCost = cFinalRouteCosts;
@@ -103,12 +107,13 @@ for i = 1:iterations
             particle(j).totalCost = sum(particle(j).routeCost)+gamma*particle(j).lateViaHome;
             particle(j).late = sum(cFinalMinutesLate) > 0.001;
             
-            particle(j).k = 1; %max(1,k-1);
+            particle(j).k = 1; % Update k - decrease
             
         else % ELSE IF local best: DO crossexchange
-            minOwnFleet = 0.3;
-            particle(j).k = min(11, particle(j).k +1);
-            crossWeight = particle(j).k;
+            
+            particle(j).k = min(11, particle(j).k +1); % Update k - increase
+            
+            crossWeight = particle(j).k; % OOK AANPASSEN BOVEN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             [Xnew,selectedTrucksID] = CROSS_Exchange(particle(j).X,crossWeight,minOwnFleet);
             
             % Update cost
@@ -173,7 +178,21 @@ fprintf('Lower bound for this tank handling: %.0f \n',bounds.lowerBound);
 fprintf('Optimality gap optimal solution: %.2f%% \n',100*(min(objectives(:,end))-bounds.lowerBound)/bounds.lowerBound);
 fprintf('\n')
 
+RESULTS.particle = particle;
+RESULTS.objectives = objectives;
+RESULTS.alpha = alpha;
+RESULTS.gamma = gamma;
+RESULTS.breakpoints = breakpoints; 
+RESULTS.iterations = iterations; 
+RESULTS.branchCode = branchCode;
+RESULTS.stageCode = stageCode;
+RESULTS.setTrucks = setTrucks;
+RESULTS.minOwnFleet = minOwnFleet;
+RESULTS.crossWeightCode = crossWeightCode;
+
 clock.totalTime = toc(clock.totalTime);
+RESULTS.clock = clock;
+
 fprintf('Mean iteration time: %.4f seconds \n',mean(clock.iterationTime));
 fprintf('Total clock time: %.4f seconds \n',clock.totalTime);
 
