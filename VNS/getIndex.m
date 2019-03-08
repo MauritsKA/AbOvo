@@ -1,4 +1,4 @@
-function [Index] = getIndexnew(IDS)
+function [Index] = getIndex(IDS)
 % Get Addressinfo Index for given list of location IDS
 load ../NewData/AddressInfo % load only if not called often
 I = [1:size(AddressInfo,1)]';
