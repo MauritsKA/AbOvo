@@ -21,7 +21,8 @@ for i = 1:size(particle,2) % For each particle
         particle(i).meanDeparture(j) = mean(departureTimes);
     end
     
-    [particle(i).latePerTruck, particle(i).lateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(i).meanDeparture,particle(i).departureTimes,jobsW);
+    particle(i).latePerTruck = getHomeSlack(setTrucks,truckHomes,particle(i).meanDeparture(1:end-size(jobsW,1)),particle(i).departureTimes);
+    particle(i).lateViaHome = sum(particle(i).latePerTruck);
     particle(i).totalCost = sum(particle(i).routeCost)+gamma*particle(i).lateViaHome;
     particle(i).late = sum(particle(i).minutesLate) > 0.001;
     particle(i).k = 1;

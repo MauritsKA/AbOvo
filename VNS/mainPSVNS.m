@@ -15,7 +15,7 @@ t_0 = datetime(2018,03,0,00,00,00);
 %% Parameters
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
-setTrucks = 1; % Allowed tours per truck
+setTrucks = 2; % Allowed tours per truck
 stageCode = "max(5,2*particle(j).k)";
 branchCode = "ceil(particle(j).k/2)+2";
 crossWeightCode = "particle(j).k";
@@ -25,8 +25,8 @@ kDecreaseCode = "1"; % If better neighbor found, reset neighborhood to 1
 kIncreaseCode = "min(11, particle(j).k +1)"; % If no better neighborhood found, increase with one up to 11
 pickNeighborCode =  "neighborIndex(1:3*particle(j).k)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
 
-iterations = 100;
-breakIteration = 0;
+iterations = 3000;
+breakIteration = 300;
 breakpoints = 0:breakIteration:iterations; 
 
 %% Generating schedules
@@ -35,8 +35,8 @@ trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
 
 % Convert tanktaniner schedules to Job schedule
-%load ../NewData/TruckJobs 
-jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
+load ../NewData/TruckJobs 
+%jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
 
 % Convert job schedule to job matrix
 [jobsW, jobsT, jobsKM] = getJobsMatrix(jobs,t_0);
@@ -67,6 +67,7 @@ routeIndex = 1:size(particle(1).X,2);
 %% Run the algorithm
 similarityLevel = zeros(size(particle,2),size(particle,2));
 meanSimilarity = zeros(iterations,1);
+truckRepeats = 0:length(truckHomes):(setTrucks-1)*length(truckHomes); % Every index the trucks repeat
 
 fprintf('Running iteration:  ');
 for i = 1:iterations
@@ -106,14 +107,16 @@ for i = 1:iterations
             cMinutesLate = particle(j).minutesLate;
             cDepartureTimes = particle(j).departureTimes;
             cMeanDeparture = particle(j).meanDeparture;
-            [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinaldepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cTotalcosts,cMinutesLate,cDepartureTimes,cMeanDeparture,numberOfBranches,numberOfStages,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha,gamma,setTrucks);
+            cLatePerTruck = particle(j).latePerTruck;
+            [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinaldepartureTimes,cFinalMeanDeparture,cFinalLatePerTruck] = relinkPath(guide,c,cRoutecosts,cTotalcosts,cMinutesLate,cDepartureTimes,cMeanDeparture,cLatePerTruck,numberOfBranches,numberOfStages,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha,gamma,setTrucks);
             
             particle(j).X = cFinal;
             particle(j).routeCost = cFinalRouteCosts;
             particle(j).minutesLate = cFinalMinutesLate;
             particle(j).departureTimes = cFinaldepartureTimes;
             particle(j).meanDeparture = cFinalMeanDeparture;
-            [particle(j).latePerTruck, particle(j).lateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(j).meanDeparture,particle(j).departureTimes,jobsW);
+            particle(j).latePerTruck = cFinalLatePerTruck;
+            particle(j).lateViaHome = sum(cFinalLatePerTruck);
             particle(j).totalCost = sum(particle(j).routeCost)+gamma*particle(j).lateViaHome;
             particle(j).late = sum(cFinalMinutesLate) > 0.001;
             
@@ -131,25 +134,35 @@ for i = 1:iterations
             newMinutesLate = particle(j).minutesLate;
             newDepartureTimes = particle(j).departureTimes;
             newMeanDeparture = particle(j).meanDeparture;
+            newLatePerTruck = particle(j).latePerTruck;
             for l = 1:length(selectedTrucksID) % Get cost of affected routes
                 routes = Xnew;
                 routeID = selectedTrucksID(l);
-                
+                baseTruckID = mod(routeID,length(truckHomes));
+                baseTruckID(baseTruckID == 0) = length(truckHomes);
+                truckIDS = truckRepeats+baseTruckID; % Get all truck columns associated to affected route
+        
                 if sum(routes(:,routeID)) ~= 0 % If route contains no jobs anymore, set costs to zero
                     [departureTimes,minutesLate,duration,totalDistance] = getRouteProperties(routes,routeID,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix);
                     newRouteCost(routeID) = duration*20/60 + totalDistance*truckCost(routeID) + alpha*minutesLate + (routeID>size(routes,2)-size(routes,1))*20; % Ommited gamma costs
                     newMinutesLate(routeID) = minutesLate;
                     newDepartureTimes{routeID} = departureTimes;
                     newMeanDeparture(routeID) = mean(departureTimes);
+                    
+                    newLatePerTruck(baseTruckID) = getHomeSlack(setTrucks,truckHomes,newMeanDeparture(truckIDS),newDepartureTimes(truckIDS));
+                    newLateViaHome = sum(newLatePerTruck);
                 else
                     newRouteCost(routeID) = 0;
                     newMinutesLate(routeID) = 0;
                     newDepartureTimes{routeID} = 0;
                     newMeanDeparture(routeID) = 0;
+                    
+                    newLatePerTruck(baseTruckID) = getHomeSlack(setTrucks,truckHomes,newMeanDeparture(truckIDS),newDepartureTimes(truckIDS));
+                    newLateViaHome = sum(newLatePerTruck);
                 end
             end
                         
-            [newLatePerTruck, newLateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(j).meanDeparture,particle(j).departureTimes,jobsW);
+            %[newLatePerTruck, newLateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(j).meanDeparture,particle(j).departureTimes,jobsW);
            
             if (sum(newRouteCost)+gamma*newLateViaHome) < particle(j).totalCost % If costs smaller then numeric error set new objective
                 particle(j).routeCost = newRouteCost;
@@ -180,6 +193,11 @@ for i = 1:iterations
     clock.iterationTime(i) = toc(iterationTime);
 end
 fprintf('\n \n')
+
+inc = -100*diff(objectives(34,:))./objectives(34,1:end-1);
+out = accumarray(ceil((1:numel(inc))/50)',inc(:),[],@mean);
+out = resample(out,50,1);
+plot(out);
 
 improvement = 100*(objectives(:,end)-objectives(:,1))./objectives(:,1);
 fprintf('Mean improvement over all particles: %.2f%% \n',mean(improvement));
