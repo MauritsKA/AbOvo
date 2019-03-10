@@ -1,4 +1,4 @@
-function [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinalDepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cMinutesLate,cDepartureTimes,cMeanDeparture,k,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha)
+function [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinalDepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cTotalcosts,cMinutesLate,cDepartureTimes,cMeanDeparture,k,numberOfIter,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha,gamma,setTrucks)
 % g = Guiding solution
 % c = Current solution
 
@@ -10,14 +10,18 @@ cStageRouteCosts = inf(numberOfIter+1,size(guide,2));
 cStageMinutesLate = inf(numberOfIter+1,size(guide,2));
 cStageDepartureTimes = cell(numberOfIter+1,size(guide,2));
 cStageMeanDeparture = zeros(numberOfIter+1,size(guide,2));
+cStageLatePerTruck = inf(numberOfIter+1,length(truckHomes));
+cStageLateViaHome = inf(numberOfIter+1,1);
 switches = zeros(numberOfIter,1);
 
 cStage = c; % Set first stage to current solution
 cStageRouteCosts(1,:) = cRoutecosts; % Set first stage route costs to current solution
-cStageTotalCosts(1,:) = sum(cRoutecosts);
+cStageTotalCosts(1,:) = cTotalcosts;
 cStageMinutesLate(1,:) = cMinutesLate;
 cStageDepartureTimes(1,:) = cDepartureTimes;
 cStageMeanDeparture(1,:) = cMeanDeparture;
+[cStageLatePerTruck(1,:), cStageLateViaHome(1)] = getHomeSlack(setTrucks,truckHomes,cMeanDeparture,cDepartureTimes,jobsW);
+   
 
 for i = 1:numberOfIter % Number of stages
     
@@ -40,6 +44,8 @@ for i = 1:numberOfIter % Number of stages
     cBranchMinutesLate = repmat(cStageMinutesLate(i,:),maxSwitches,1);
     cBranchDepartureTimes = repmat(cStageDepartureTimes(i,:),maxSwitches,1);
     cBranchMeanDeparture = repmat(cStageMeanDeparture(i,:),maxSwitches,1);
+    cBranchLatePerTruck = zeros(maxSwitches, length(truckHomes));
+    cBranchLateViaHome = zeros(maxSwitches,1);
     
     for j = 1:maxSwitches % Max number of branches, try all switches
         cBranch = cStage; % First branch is initial stage
@@ -82,14 +88,18 @@ for i = 1:numberOfIter % Number of stages
             cBranchDepartureTimes{j,routeID} = 0;
             cBranchMeanDeparture(j,routeID) = 0;
         end
+        
+        [cBranchLatePerTruck(j,:), cBranchLateViaHome(j)] = getHomeSlack(setTrucks,truckHomes,cBranchMeanDeparture(j,:),cBranchDepartureTimes(j,:),jobsW);
     end
     
     % Compare total costs of all branches, select best branch and update stage route costs
-    [cStageTotalCosts(i+1), branchBestIndex] = min(sum(cBranchRouteCosts,2));
+    [cStageTotalCosts(i+1), branchBestIndex] = min(sum(cBranchRouteCosts,2)+gamma*cBranchLateViaHome);
     cStageRouteCosts(i+1,:) = cBranchRouteCosts(branchBestIndex,:);
     cStageMinutesLate(i+1,:) = cBranchMinutesLate(branchBestIndex,:);
     cStageDepartureTimes(i+1,:) = cBranchDepartureTimes(branchBestIndex,:);
     cStageMeanDeparture(i+1,:) = cBranchMeanDeparture(branchBestIndex,:);
+    cStageLatePerTruck(i+1,:) = cBranchLatePerTruck(branchBestIndex,:);
+    cStageLateViaHome(i+1) = cBranchLateViaHome(branchBestIndex);
     
     % Update stage with best branch switch
     cStage(row_switches(branchBestIndex),:) = guide(row_switches(branchBestIndex),:);

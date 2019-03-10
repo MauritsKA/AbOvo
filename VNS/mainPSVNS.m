@@ -11,14 +11,25 @@ load ../DataHS/CostsPerKmPerTrucks
 load ../NewData/TankSchedule
 
 t_0 = datetime(2018,03,0,00,00,00);
+
+%% Parameters
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
 setTrucks = 1; % Allowed tours per truck
-stageCode = "max(5,3*particle(j).k)";
+stageCode = "max(5,2*particle(j).k)";
 branchCode = "ceil(particle(j).k/2)+2";
-crossWeightCode = "particle(j).k;";
+crossWeightCode = "particle(j).k";
 minOwnFleet = 0.3; % Set percentage of minimum own fleet used in crossover
 
+kDecreaseCode = "1"; % If better neighbor found, reset neighborhood to 1
+kIncreaseCode = "min(11, particle(j).k +1)"; % If no better neighborhood found, increase with one up to 11
+pickNeighborCode =  "neighborIndex(1:3*particle(j).k)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
+
+iterations = 100;
+breakIteration = 0;
+breakpoints = 0:breakIteration:iterations; 
+
+%% Generating schedules
 % Select trucks, remove table and pre convert tank adresses
 trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
@@ -36,7 +47,7 @@ jobsKM(jobsKM(:,1) == 545 | jobsKM(:,1) == 549,:) = [];
 % Add costs for charters and duplicate costs for multiple use of trucks
 truckCost = [repmat(CostsPerKm,setTrucks,1); 3*ones(size(jobsW,1),1)];
 
-% Create initial solutions
+%% Creating initial solutions
 particle = createInitialSolutions(jobsW,setTrucks);
 particle(size(particle,2)+1).X = particle(size(particle,2)).X;
 
@@ -44,20 +55,18 @@ particle(size(particle,2)+1).X = particle(size(particle,2)).X;
 bounds.minTimeWindow = jobsW(sub2ind(size(jobsW),(1:size(jobsW,1))',sum(jobsW > 0,2)-1)) - jobsW(:,6);
 bounds.minServiceTime = sum(jobsT(:,2:end),2);
 bounds.minTimeCost = sum(max(bounds.minTimeWindow,bounds.minServiceTime))*20/60;
-bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.80;
+bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.44;
 bounds.lowerBound = bounds.minTimeCost + bounds.minDistCostTrucks;
 
-%% Get initial solutions
+%% Evaluate initial solutions
 routeIndex = 1:size(particle(1).X,2);
 
 % Calculate all initial fitness
 [particle,objectives] = getInitialFitness(particle,routeIndex,jobsW,jobsT,jobsKM,setTrucks,truckHomes,truckCost,alpha,gamma);
 
 %% Run the algorithm
-iterations = 2;
-breakIteration = 10;
-breakpoints = 0:breakIteration:iterations; 
-similarityLevel= zeros(size(particle,2),size(particle,2));
+similarityLevel = zeros(size(particle,2),size(particle,2));
+meanSimilarity = zeros(iterations,1);
 
 fprintf('Running iteration:  ');
 for i = 1:iterations
@@ -73,30 +82,31 @@ for i = 1:iterations
         end
         similarityLevel(:,j) = similarityLevel(j,:);
         
-        % Select k closest neighbours
-        [~,neighbourIndex] = sort(similarityLevel(j,:),'descend');
+        % Select k closest neighbors
+        [~,neighborIndex] = sort(similarityLevel(j,:),'descend');
         
-        pickedNeighbours = neighbourIndex(1:3*particle(j).k);
-        neighbourCosts=zeros(length(pickedNeighbours),1);
-        for l = 1:length(pickedNeighbours)
-            neighbourCosts(l) = particle(pickedNeighbours(l)).totalCost;
+        pickedneighbors = eval(pickNeighborCode); % compare to neighborhood
+        neighborCosts=zeros(length(pickedneighbors),1);
+        for l = 1:length(pickedneighbors)
+            neighborCosts(l) = particle(pickedneighbors(l)).totalCost;
         end
         
-        [~,bestNeighbourIndex] = min(neighbourCosts);
-        bestNeighbour = pickedNeighbours(bestNeighbourIndex);
+        [~,bestneighborIndex] = min(neighborCosts);
+        bestneighbor = pickedneighbors(bestneighborIndex);
         
-        % IF any close neighbour better: DO pathrelinking
-        if particle(bestNeighbour).totalCost < particle(j).totalCost
-            numberOfStages = max(5,3*particle(j).k);
-            numberOfBranches = ceil(particle(j).k/2)+2; % OOK AANPASSEN BOVEN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        % IF any close neighbor better: DO pathrelinking
+        if particle(bestneighbor).totalCost < particle(j).totalCost
+            numberOfStages = eval(stageCode);
+            numberOfBranches = eval(branchCode); 
             
-            guide = particle(bestNeighbour).X;
+            guide = particle(bestneighbor).X;
             c = particle(j).X;
             cRoutecosts = particle(j).routeCost;
+            cTotalcosts = particle(j).totalCost;
             cMinutesLate = particle(j).minutesLate;
             cDepartureTimes = particle(j).departureTimes;
             cMeanDeparture = particle(j).meanDeparture;
-            [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinaldepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cMinutesLate,cDepartureTimes,cMeanDeparture,numberOfBranches,numberOfStages,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha);
+            [cFinal, cFinalRouteCosts,cFinalMinutesLate,cFinaldepartureTimes,cFinalMeanDeparture] = relinkPath(guide,c,cRoutecosts,cTotalcosts,cMinutesLate,cDepartureTimes,cMeanDeparture,numberOfBranches,numberOfStages,jobsW,jobsT,jobsKM,truckHomes,DistanceMatrix,TimeMatrix,truckCost,alpha,gamma,setTrucks);
             
             particle(j).X = cFinal;
             particle(j).routeCost = cFinalRouteCosts;
@@ -107,13 +117,13 @@ for i = 1:iterations
             particle(j).totalCost = sum(particle(j).routeCost)+gamma*particle(j).lateViaHome;
             particle(j).late = sum(cFinalMinutesLate) > 0.001;
             
-            particle(j).k = 1; % Update k - decrease
+            particle(j).k = eval(kDecreaseCode); % Update k - decrease
             
         else % ELSE IF local best: DO crossexchange
             
-            particle(j).k = min(11, particle(j).k +1); % Update k - increase
+            particle(j).k = eval(kIncreaseCode); % Update k - increase
             
-            crossWeight = particle(j).k; % OOK AANPASSEN BOVEN !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            crossWeight = eval(crossWeightCode); 
             [Xnew,selectedTrucksID] = CROSS_Exchange(particle(j).X,crossWeight,minOwnFleet);
             
             % Update cost
@@ -138,7 +148,7 @@ for i = 1:iterations
                     newMeanDeparture(routeID) = 0;
                 end
             end
-            
+                        
             [newLatePerTruck, newLateViaHome] = getHomeSlack(setTrucks,truckHomes,particle(j).meanDeparture,particle(j).departureTimes,jobsW);
            
             if (sum(newRouteCost)+gamma*newLateViaHome) < particle(j).totalCost % If costs smaller then numeric error set new objective
@@ -156,6 +166,8 @@ for i = 1:iterations
         end 
         objectives(j,i+1) = particle(j).totalCost;
     end
+    
+    meanSimilarity(i) = mean(similarityLevel(:));
     
     if sum(breakpoints == i) > 0 
       [~,iBest] = min(objectives(:,end));
@@ -180,6 +192,7 @@ fprintf('\n')
 
 RESULTS.particle = particle;
 RESULTS.objectives = objectives;
+RESULTS.meanSimilarity = meanSimilarity;
 RESULTS.alpha = alpha;
 RESULTS.gamma = gamma;
 RESULTS.breakpoints = breakpoints; 
@@ -189,6 +202,9 @@ RESULTS.stageCode = stageCode;
 RESULTS.setTrucks = setTrucks;
 RESULTS.minOwnFleet = minOwnFleet;
 RESULTS.crossWeightCode = crossWeightCode;
+RESULTS.kDecreaseCode = kDecreaseCode;
+RESULTS.kIncreaseCode = kIncreaseCode;
+RESULTS.pickNeighborCode =  pickNeighborCode;
 
 clock.totalTime = toc(clock.totalTime);
 RESULTS.clock = clock;
