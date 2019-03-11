@@ -3,7 +3,6 @@
 
 %% Initialize
 clear all; clc;
-clock.totalTime = tic;
 
 load ../NewData/Linkingmatrices
 load ../NewData/Truck_Tank_info
@@ -15,19 +14,21 @@ t_0 = datetime(2018,03,0,00,00,00);
 %% Parameters
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
-setTrucks = 2; % Allowed tours per truck
+setTrucks = 1; % Allowed tours per truck
 stageCode = "max(5,2*particle(j).k)";
 branchCode = "ceil(particle(j).k/2)+2";
 crossWeightCode = "particle(j).k";
 minOwnFleet = 0.3; % Set percentage of minimum own fleet used in crossover
 
 kDecreaseCode = "1"; % If better neighbor found, reset neighborhood to 1
-kIncreaseCode = "min(11, particle(j).k +1)"; % If no better neighborhood found, increase with one up to 11
-pickNeighborCode =  "neighborIndex(1:3*particle(j).k)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
+kIncreaseCode = "min(18 , particle(j).k +1)"; % If no better neighborhood found, increase with one up to 11
+pickNeighborCode =  "neighborIndex(1:1*particle(j).k)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
 
-iterations = 3000;
-breakIteration = 300;
+iterations = 5000;
+breakIteration = 400;
 breakpoints = 0:breakIteration:iterations; 
+
+type1 = 0; type2 = 0; type3 = 0; type4 = 15;
 
 %% Generating schedules
 % Select trucks, remove table and pre convert tank adresses
@@ -35,8 +36,8 @@ trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
 
 % Convert tanktaniner schedules to Job schedule
-load ../NewData/TruckJobs 
-%jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
+%load ../NewData/TruckJobs 
+jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
 
 % Convert job schedule to job matrix
 [jobsW, jobsT, jobsKM] = getJobsMatrix(jobs,t_0);
@@ -47,15 +48,17 @@ jobsKM(jobsKM(:,1) == 545 | jobsKM(:,1) == 549,:) = [];
 % Add costs for charters and duplicate costs for multiple use of trucks
 truckCost = [repmat(CostsPerKm,setTrucks,1); 3*ones(size(jobsW,1),1)];
 
+for iii = 1:5 % Repeat results
+clock.totalTime = tic;
 %% Creating initial solutions
-particle = createInitialSolutions(jobsW,setTrucks);
+particle = createInitialSolutions(jobsW,setTrucks,truckCost,type1,type2,type3,type4);
 particle(size(particle,2)+1).X = particle(size(particle,2)).X;
 
 %% Lower bound given this specific tank handling
 bounds.minTimeWindow = jobsW(sub2ind(size(jobsW),(1:size(jobsW,1))',sum(jobsW > 0,2)-1)) - jobsW(:,6);
 bounds.minServiceTime = sum(jobsT(:,2:end),2);
 bounds.minTimeCost = sum(max(bounds.minTimeWindow,bounds.minServiceTime))*20/60;
-bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.44;
+bounds.minDistCostTrucks = sum(sum(jobsKM(:,2:end)))*0.8;%0.44;
 bounds.lowerBound = bounds.minTimeCost + bounds.minDistCostTrucks;
 
 %% Evaluate initial solutions
@@ -185,7 +188,7 @@ for i = 1:iterations
     if sum(breakpoints == i) > 0 
       [~,iBest] = min(objectives(:,end));
       Xopt = particle(iBest).X; 
-      particle = createInitialSolutions(jobsW,setTrucks);
+      particle = createInitialSolutions(jobsW,setTrucks,truckCost,type1,type2,type3,type4);
       particle(size(particle,2)+1).X = Xopt;
       [particle,~] = getInitialFitness(particle,routeIndex,jobsW,jobsT,jobsKM,setTrucks,truckHomes,truckCost,alpha,gamma);
     end 
@@ -194,10 +197,11 @@ for i = 1:iterations
 end
 fprintf('\n \n')
 
-inc = -100*diff(objectives(34,:))./objectives(34,1:end-1);
+inc = -100*diff(objectives(size(particle,2),:))./objectives(size(particle,2),1:end-1);
 out = accumarray(ceil((1:numel(inc))/50)',inc(:),[],@mean);
 out = resample(out,50,1);
 plot(out);
+axis([0 iterations 0 max(out)*1.2+0.00001])
 
 improvement = 100*(objectives(:,end)-objectives(:,1))./objectives(:,1);
 fprintf('Mean improvement over all particles: %.2f%% \n',mean(improvement));
@@ -208,25 +212,29 @@ fprintf('Lower bound for this tank handling: %.0f \n',bounds.lowerBound);
 fprintf('Optimality gap optimal solution: %.2f%% \n',100*(min(objectives(:,end))-bounds.lowerBound)/bounds.lowerBound);
 fprintf('\n')
 
-RESULTS.particle = particle;
-RESULTS.objectives = objectives;
-RESULTS.meanSimilarity = meanSimilarity;
-RESULTS.alpha = alpha;
-RESULTS.gamma = gamma;
-RESULTS.breakpoints = breakpoints; 
-RESULTS.iterations = iterations; 
-RESULTS.branchCode = branchCode;
-RESULTS.stageCode = stageCode;
-RESULTS.setTrucks = setTrucks;
-RESULTS.minOwnFleet = minOwnFleet;
-RESULTS.crossWeightCode = crossWeightCode;
-RESULTS.kDecreaseCode = kDecreaseCode;
-RESULTS.kIncreaseCode = kIncreaseCode;
-RESULTS.pickNeighborCode =  pickNeighborCode;
+RESULTS(iii).particle = particle;
+RESULTS(iii).objectives = objectives;
+RESULTS(iii).meanSimilarity = meanSimilarity;
+RESULTS(iii).alpha = alpha;
+RESULTS(iii).gamma = gamma;
+RESULTS(iii).breakpoints = breakpoints; 
+RESULTS(iii).iterations = iterations; 
+RESULTS(iii).branchCode = branchCode;
+RESULTS(iii).stageCode = stageCode;
+RESULTS(iii).setTrucks = setTrucks;
+RESULTS(iii).minOwnFleet = minOwnFleet;
+RESULTS(iii).crossWeightCode = crossWeightCode;
+RESULTS(iii).kDecreaseCode = kDecreaseCode;
+RESULTS(iii).kIncreaseCode = kIncreaseCode;
+RESULTS(iii).pickNeighborCode =  pickNeighborCode;
+RESULTS(iii).type1 =  type1;
+RESULTS(iii).type2 =  type2;
+RESULTS(iii).type3 =  type3;
+RESULTS(iii).type4 =  type4;
 
 clock.totalTime = toc(clock.totalTime);
-RESULTS.clock = clock;
+RESULTS(iii).clock = clock;
 
 fprintf('Mean iteration time: %.4f seconds \n',mean(clock.iterationTime));
 fprintf('Total clock time: %.4f seconds \n',clock.totalTime);
-
+end 

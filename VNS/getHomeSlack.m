@@ -31,5 +31,5 @@ if setTrucks > 1
     routeSlack = departures - arrivals;
     latenessViaHome = sum(-(routeSlack.*(routeSlack < 0)),2)';
 else
-    latenessViaHome = zeros(1,length(truckHomes));
+    latenessViaHome = zeros(1,length(meanDeparture)/setTrucks);
 end

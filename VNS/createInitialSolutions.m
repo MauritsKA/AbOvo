@@ -1,12 +1,12 @@
-function [particle] = createInitialSolutions(jobsW,setTrucks)
+function [particle] = createInitialSolutions(jobsW,setTrucks,truckCost,type1,type2,type3,type4)
 
 load ../NewData/Truck_Tank_info
 load ../NewData/LinkingMatrices
 %% Created solutions
-num.RANDOM_SOLUTIONS_OWN_FLEET = 10; %create random solution with own fleet only
-num.RANDOM_SOLUTIONS = 10;           %create random solution using charters and own fleet
-num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK = 10;
-%num.RANDOM_SOLUTIONS_MAX_1_PER_TRUCK = 10;     
+num.RANDOM_SOLUTIONS_OWN_FLEET = type1; %create random solution with own fleet only
+num.RANDOM_SOLUTIONS = type2;           %create random solution using charters and own fleet
+num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK = type3;
+%num.RANDOM_SOLUTIONS_MAX_1_PER_TRUCK = 10;
 
 %%
 trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
@@ -50,8 +50,8 @@ TimeMatrixJobsTrucksCombiTrans = TimeMatrixJobsTrucksCombi';
 [~,minStartTruck] = min(TimeMatrixJobsTrucksCombiTrans);
 minStartTruck = minStartTruck';
 
-multipleUse = (length(truckHomes)*(randi(setTrucks,1,size(jobsW,1))-1))'; % add random extra indices for re use of truck 
-minStartTruck = minStartTruck+multipleUse; 
+multipleUse = (length(truckHomes)*(randi(setTrucks,1,size(jobsW,1))-1))'; % add random extra indices for re use of truck
+minStartTruck = minStartTruck+multipleUse;
 
 SolutionTemp = zeros(num.Jobs,num.Cols);
 SolutionTemp(sub2ind(size(SolutionTemp),jobsIndex,minStartTruck)) = 1;
@@ -89,25 +89,46 @@ initSolution.ClosestOwnTruckAndCharters = SolutionTemp;
 
 %% Create random max 1 per truck
 for i = 1:num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK
-randomJob = randperm(num.Jobs);
-randomTruck = randperm(num.Trucks);
-randomJobAssigned = randomJob(1:min(num.Trucks,num.Jobs));
-randomTruckAssigned = randomTruck(1:length(randomJobAssigned));
-%tempVec = 1:1:num.Trucks;
+    randomJob = randperm(num.Jobs);
+    randomTruck = randperm(num.Trucks);
+    randomJobAssigned = randomJob(1:min(num.Trucks,num.Jobs));
+    randomTruckAssigned = randomTruck(1:length(randomJobAssigned));
+    %tempVec = 1:1:num.Trucks;
+    
+    SolutionTemp = zeros(num.Jobs,num.Cols);
+    SolutionTemp(sub2ind(size(SolutionTemp),randomJobAssigned,randomTruckAssigned)) = 1;
+    
+    chartersUsed = num.Jobs - num.Trucks;
+    
+    jobsNotAssigned = sum(SolutionTemp,2) == 0;
+    tempVec2 = 1:1:num.Rows;
+    jobsNotAssignedID = tempVec2(jobsNotAssigned);
+    chartersIDs = num.Trucks+1:1:num.Trucks+chartersUsed;
+    
+    SolutionTemp(sub2ind(size(SolutionTemp),jobsNotAssignedID,chartersIDs)) = 1;
+    
+    initSolution.RandomMax1OwnFleet(:,:,i) = SolutionTemp;
+end
 
-SolutionTemp = zeros(num.Jobs,num.Cols);
-SolutionTemp(sub2ind(size(SolutionTemp),randomJobAssigned,randomTruckAssigned)) = 1;
+%% Create random solution based on truck costs
+baseNrOfJobs = floor(size(jobsW,1)/10); % 10 cheapest trucks
+remainingJobs = mod(size(jobsW,1),10);
+[~, sortedTruckIDS]= sort(truckCost);
+cheapTruckIDS = sortedTruckIDS(1:10);
 
-chartersUsed = num.Jobs - num.Trucks;
-
-jobsNotAssigned = sum(SolutionTemp,2) == 0;
-tempVec2 = 1:1:num.Rows;
-jobsNotAssignedID = tempVec2(jobsNotAssigned);
-chartersIDs = num.Trucks+1:1:num.Trucks+chartersUsed;
-
-SolutionTemp(sub2ind(size(SolutionTemp),jobsNotAssignedID,chartersIDs)) = 1;
-
-initSolution.RandomMax1OwnFleet(:,:,i) = SolutionTemp;
+ initSolution.CheapTrucks(:,:,:)  = zeros(num.Jobs,num.Cols,type4);
+ 
+for i = 1:type4
+    allJobs = randperm(size(jobsW,1));
+    
+    for j=1:10
+        if j==1
+            initSolution.CheapTrucks(allJobs(1:baseNrOfJobs+remainingJobs),cheapTruckIDS(j),i) = 1;
+        else 
+            initSolution.CheapTrucks(allJobs((j-1)*baseNrOfJobs+remainingJobs+1:j*baseNrOfJobs+remainingJobs),cheapTruckIDS(j),i) = 1;
+        end
+        
+    end     
 end
 
 %% create all charter
@@ -120,19 +141,27 @@ initSolution.allCharters = SolutionTemp;
 for i = 1:num.RANDOM_SOLUTIONS_OWN_FLEET
     particle(i).X = sparse(initSolution.RandomOwnFleet(:,:,i));
 end
+i(isempty(i))=0;
 
-for j = i+1:2*num.RANDOM_SOLUTIONS
-      particle(j).X = sparse(initSolution.Random(:,:,j-num.RANDOM_SOLUTIONS_OWN_FLEET));
+for j = i+1:i+num.RANDOM_SOLUTIONS
+    particle(j).X = sparse(initSolution.Random(:,:,j-num.RANDOM_SOLUTIONS_OWN_FLEET));
 end
- 
-for k = j+1:3*num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK
-      particle(k).X = sparse(initSolution.RandomMax1OwnFleet(:,:,k-2*num.RANDOM_SOLUTIONS));
+j(isempty(j))=i;
+
+for k = j+1:j+num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK
+    particle(k).X = sparse(initSolution.RandomMax1OwnFleet(:,:,k-num.RANDOM_SOLUTIONS-num.RANDOM_SOLUTIONS_OWN_FLEET));
 end
+k(isempty(k))=j;
 
-particle(k+1).X = sparse(initSolution.ClosestOwnTruck);
-particle(k+2).X = sparse(initSolution.ClosestOwnTruckAndCharters);
-particle(k+3).X = sparse(initSolution.allCharters);
+for l = k+1:k+type4
+    particle(l).X = sparse(initSolution.CheapTrucks(:,:,l-num.RANDOM_SOLUTIONS-num.RANDOM_SOLUTIONS_OWN_FLEET-num.RANDOM_SOLUTIONS_OWN_FLEET_MAX_1_PER_TRUCK));
+end
+l(isempty(l))=k;
 
- 
- 
+particle(l+1).X = sparse(initSolution.ClosestOwnTruck);
+particle(l+2).X = sparse(initSolution.ClosestOwnTruckAndCharters);
+particle(l+3).X = sparse(initSolution.allCharters);
+
+
+
 
