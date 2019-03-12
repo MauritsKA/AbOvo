@@ -15,7 +15,7 @@ times_to_cut = 0;
 for i = 1:nr_sources
     times_to_cut = times_to_cut +sum(routesTankScheduling(i).directCleaning == 0) + sum(routesTankScheduling(i).depotUsed == 1);
 end
-nr_jobs = times_to_cut + nr_sources + size(Tfull,1);
+nr_jobs = times_to_cut + nr_sources;
 jobs(1:nr_jobs) = struct('addressIndex',[],'windowOpen',[],'windowClose',[],'workingKM',[],'workingT',[],'tasks',[],'sets',[],'tankRouteID',[]);
 
 for i = 1:size(routesTankScheduling,2)
@@ -274,26 +274,29 @@ for i = 1:size(routesTankScheduling,2)
     end
     j = j+1; % Start new job if using new source
 end
-tempLength = size(jobs,2)-size(Tfull,1);
+tempLength = size(jobs,2);
+j=tempLength;
+
+Tfull([1,3,4,5,6,7,8,9,10,14,15,17,18],:) = [];
 
 for i = 1:size(Tfull,1)
-    j=tempLength+i;
-    jobs(j).addressIndex = getIndex(Tfull.FromAddressID(i));
-    jobs(j).windowOpen = Tfull.PickupWindowStart(i);
-    jobs(j).windowClose = Tfull.PickupWindowEnd(i);
-    jobs(j).workingKM = 0;
-    jobs(j).workingT = 0;
-    jobs(j).tasks = "ter";
-    jobs(j).sets = "T";
-    jobs(j).tankRouteID = [];
-    
-    jobs(j).addressIndex(end+1) = getIndex(Tfull.ToAddressID(i));
-    jobs(j).windowOpen(end+1) = Tfull.DeliveryWindowStart(i);
-    jobs(j).windowClose(end+1) = Tfull.DeliveryWindowEnd(i);
-    jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
-    jobs(j).workingT(end+1) = TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
-    jobs(j).tasks(end+1) = "ter";
-    jobs(j).sets(end+1) = "T";
+        j=j+1;
+        jobs(j).addressIndex = getIndex(Tfull.FromAddressID(i));
+        jobs(j).windowOpen = Tfull.PickupWindowStart(i);
+        jobs(j).windowClose = Tfull.PickupWindowEnd(i);
+        jobs(j).workingKM = 0;
+        jobs(j).workingT = 0;
+        jobs(j).tasks = "ter";
+        jobs(j).sets = "T";
+        jobs(j).tankRouteID = [];
+        
+        jobs(j).addressIndex(end+1) = getIndex(Tfull.ToAddressID(i));
+        jobs(j).windowOpen(end+1) = Tfull.DeliveryWindowStart(i);
+        jobs(j).windowClose(end+1) = Tfull.DeliveryWindowEnd(i);
+        jobs(j).workingKM(end+1) = DistanceMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
+        jobs(j).workingT(end+1) = TimeMatrix(jobs(j).addressIndex(end-1),jobs(j).addressIndex(end));
+        jobs(j).tasks(end+1) = "ter";
+        jobs(j).sets(end+1) = "T";
 end
 
 end
