@@ -73,7 +73,7 @@ plot(stage1(2).objectives(23,:))
 hold on
 plot(stage1(2).objectives([1],:)')
 hold off
-axis([0 5000 2.5e5 5e5])
+axis([0 4000 2.5e5 5e5])
 legend('Best particle', 'particle 1')
 xlabel('Iterations')
 ylabel('Costs in Euros')
@@ -83,7 +83,7 @@ subplot(1,2,2)
 plot(stage4(2).objectives(23,:))
 hold on
 plot(stage4(2).objectives([1],:)')
-axis([0 5000 2.5e5 5e5])
+axis([0 4000 2.5e5 5e5])
 legend('Best particle', 'particle 1')
 xlabel('Iterations')
 ylabel('Costs in Euros')
