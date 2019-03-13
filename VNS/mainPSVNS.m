@@ -15,20 +15,20 @@ t_0 = datetime(2018,03,0,00,00,00);
 alpha = 100; % Tuning parameters for cost function
 gamma = 100;
 setTrucks = 1; % Allowed tours per truck
-stageCode = "max(5,2*particle(j).k)";
+stageCode = "max(11,4*particle(j).k)";
 branchCode = "ceil(particle(j).k/2)+2";
 crossWeightCode = "particle(j).k";
 minOwnFleet = 0.3; % Set percentage of minimum own fleet used in crossover
 
 kDecreaseCode = "1"; % If better neighbor found, reset neighborhood to 1
-kIncreaseCode = "min(18 , particle(j).k +1)"; % If no better neighborhood found, increase with one up to 11
-pickNeighborCode =  "neighborIndex(1:1*particle(j).k)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
+kIncreaseCode = "min(11 , particle(j).k +1)"; % If no better neighborhood found, increase with one up to 11
+pickNeighborCode =  "neighborIndex(1:33)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
 
-iterations = 5000;
-breakIteration = 400;
+iterations = 10000;
+breakIteration = 300;
 breakpoints = 0:breakIteration:iterations; 
 
-type1 = 0; type2 = 0; type3 = 0; type4 = 15;
+type1 = 0; type2 = 10; type3 = 10; type4 = 10;
 
 %% Generating schedules
 % Select trucks, remove table and pre convert tank adresses
@@ -36,19 +36,16 @@ trucks = Truck_Tank(Truck_Tank.ResourceType == "Truck",:);
 truckHomes = getIndex(trucks.HomeAddressID); clear Truck_Tank trucks
 
 % Convert tanktaniner schedules to Job schedule
-%load ../NewData/TruckJobs 
+% load ../NewData/TruckJobs 
 jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedule, or generate new one !!
 
 % Convert job schedule to job matrix
 [jobsW, jobsT, jobsKM] = getJobsMatrix(jobs,t_0);
-jobsW(jobsW(:,1) == 545 | jobsW(:,1) == 549,:) = []; % Remove infeasible repositioning
-jobsT(jobsT(:,1) == 545 | jobsT(:,1) == 549,:) = [];
-jobsKM(jobsKM(:,1) == 545 | jobsKM(:,1) == 549,:) = [];
 
 % Add costs for charters and duplicate costs for multiple use of trucks
 truckCost = [repmat(CostsPerKm,setTrucks,1); 3*ones(size(jobsW,1),1)];
-
-for iii = 1:5 % Repeat results
+%%
+for iii = 1:1 % Repeat results
 clock.totalTime = tic;
 %% Creating initial solutions
 particle = createInitialSolutions(jobsW,setTrucks,truckCost,type1,type2,type3,type4);
@@ -88,7 +85,7 @@ for i = 1:iterations
         
         % Select k closest neighbors
         [~,neighborIndex] = sort(similarityLevel(j,:),'descend');
-        
+  
         pickedneighbors = eval(pickNeighborCode); % compare to neighborhood
         neighborCosts=zeros(length(pickedneighbors),1);
         for l = 1:length(pickedneighbors)

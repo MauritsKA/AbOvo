@@ -27,9 +27,7 @@ for i = 1:5
 end 
 z=z/5;
 
-boxplot(x,{'type 1','type 2', 'type 3', 'type 4'})
-xlabel('Types of initial 15 particles')
-ylabel('Costs in Euros after 5000 iterations')
+
 
 [~,I] = min(x);
 
@@ -39,8 +37,14 @@ y(3,:) = type3(I(3)).objectives(19,:);
 y(4,:) = type4(I(4)).objectives(19,:);
 
 figure()
+subplot(1,2,1)
 plot(z')
 legend('type 1','type 2', 'type 3', 'type 4')
 xlabel('Iterations')
 ylabel('Average costs in Euros')
 axis([0 5000 2.8e5 5e5])
+
+subplot(1,2,2)
+boxplot(x,{'type 1','type 2', 'type 3', 'type 4'})
+xlabel('Types of initial 15 particles')
+ylabel('Costs in Euros after 5000 iterations')
