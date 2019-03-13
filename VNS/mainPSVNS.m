@@ -22,13 +22,13 @@ minOwnFleet = 0.3; % Set percentage of minimum own fleet used in crossover
 
 kDecreaseCode = "1"; % If better neighbor found, reset neighborhood to 1
 kIncreaseCode = "min(11 , particle(j).k +1)"; % If no better neighborhood found, increase with one up to 11
-pickNeighborCode =  "neighborIndex(1:33)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
+pickNeighborCode =  "neighborIndex(1:22)"; % 33 initial solutions, 11 neighborhoods, so each k adds 3 neighbors
 
-iterations = 10000;
-breakIteration = 300;
+iterations = 1000;
+breakIteration = 150;
 breakpoints = 0:breakIteration:iterations; 
 
-type1 = 0; type2 = 10; type3 = 10; type4 = 10;
+type1 = 0; type2 = 6; type3 = 7; type4 = 6;
 
 %% Generating schedules
 % Select trucks, remove table and pre convert tank adresses
@@ -45,7 +45,7 @@ jobs = getJobs(routesTankScheduling); % !! Either use original saved job schedul
 % Add costs for charters and duplicate costs for multiple use of trucks
 truckCost = [repmat(CostsPerKm,setTrucks,1); 3*ones(size(jobsW,1),1)];
 %%
-for iii = 1:1 % Repeat results
+for iii = 1:3 % Repeat results
 clock.totalTime = tic;
 %% Creating initial solutions
 particle = createInitialSolutions(jobsW,setTrucks,truckCost,type1,type2,type3,type4);
@@ -78,10 +78,11 @@ for i = 1:iterations
     for j = 1:size(particle,2) % For each particle
         
         % Retrieve neighborhood by similarity matrix
-        for l = j+1:size(particle,2)
-            similarityLevel(j,l) = getSimilarity(particle(j).X,particle(l).X);
-        end
-        similarityLevel(:,j) = similarityLevel(j,:);
+%         for l = j+1:size(particle,2)
+%             similarityLevel(j,l) = getSimilarity(particle(j).X,particle(l).X);
+%         end
+%         similarityLevel(:,j) = similarityLevel(j,:);
+        similarityLevel = (ones(23)-eye(23))*size(jobsW,1);
         
         % Select k closest neighbors
         [~,neighborIndex] = sort(similarityLevel(j,:),'descend');
